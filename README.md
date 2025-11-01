@@ -1,156 +1,110 @@
-# LED Matrix Display System
+# Pi-Matrix: LED Matrix Display System
 
-A complete Python-based LED matrix display system with graphics primitives, ZX Spectrum-style text rendering, and terminal emulation. Designed for developing display applications before deploying to physical hardware (Raspberry Pi with LED matrix displays).
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
 
-## Target Hardware
-- Raspberry Pi Zero or later
-- 64x64 or 128x64 LED matrix displays
-- Full RGB color support
+A complete Python LED matrix display system with graphics primitives and ZX Spectrum-style text rendering. **Develop on any machine, deploy to Raspberry Pi LED matrices.**
 
-## Features
-
-### 🎨 Graphics Primitives (`src/graphics.py`)
-Complete set of drawing functions with RGB color support:
-- **Lines**: Bresenham's algorithm for pixel-perfect lines
-- **Shapes**: Rectangles, rounded rectangles, circles, ellipses
-- **Polygons**: Triangles, polygons, stars
-- **Fill modes**: Outline or filled shapes
-- **Advanced**: Flood fill, circle with outline
-
-### 📝 Text System (`src/font.py`)
-ZX Spectrum-inspired 8x8 pixel font system:
-- **ZX Spectrum character set**: Full ASCII + block graphics
-- **8x8 character grid**: 8x8 characters on 64x64 display
-- **Text modes**:
-  - Pixel-positioned: Place text at any x,y coordinate
-  - Grid-positioned: Character grid (0-7, 0-7) for 64x64
-  - Text buffer: Fill screen like ZX-81 text mode
-- **Custom icons**: Register your own 8x8 symbols
-- **RGB colors**: Foreground and background color support
-- **Block graphics**: ZX Spectrum-style quarter blocks
-
-### 🖥️ Display System (`src/display.py`)
-Universal framebuffer abstraction:
-- Framebuffer for LED matrix displays
-- Monochrome (on/off) and RGB color modes
-- Configurable dimensions (64x64, 128x64, etc.)
-- Renderer-agnostic design
-
-### 📺 Terminal Renderer
-Development-friendly terminal output:
-- Unicode block characters (▀ ▄ █) for compact display
-- Half-block mode: 2:1 vertical pixel packing
-- ANSI 256-color RGB support
-- ASCII fallback mode for terminals without Unicode
-- 64x64 display = 64 chars wide × 32 chars tall
-
-### 🚀 High-Level API (`src/led_api.py`)
-Simple, user-friendly interface:
 ```python
 from src.led_api import create_matrix
 
-# Create matrix
 matrix = create_matrix(64, 64, 'rgb')
-
-# Draw graphics
 matrix.circle(32, 32, 20, (0, 100, 255), fill=True)
-matrix.star(48, 16, 8, color=(255, 255, 0), fill=True)
-
-# Add text
 matrix.text("HELLO", 10, 28, (255, 255, 255))
-
-# Show on terminal
 matrix.show()
 ```
 
-## Project Structure
-```
-led-matrix-project/
-├── src/
-│   ├── display.py       # Core display and framebuffer
-│   ├── graphics.py      # Drawing primitives
-│   ├── font.py          # ZX Spectrum font system
-│   └── led_api.py       # High-level user API
-├── examples/
-│   ├── hello_world.py           # Quick start example
-│   ├── graphics_showcase.py     # All drawing primitives
-│   ├── text_showcase.py         # Text and font features
-│   ├── combined_demo.py         # Graphics + text together
-│   ├── animation_demo.py        # Moving patterns
-│   ├── plasma_demo.py           # Mathematical effects
-│   ├── physics_demo.py          # Physics simulations
-│   ├── starfield_demo.py        # Particle effects
-│   ├── aspect_test.py           # Terminal aspect ratio test
-│   └── font_test.py             # Unicode support check
-└── tests/                       # Unit tests (coming soon)
-```
+## 🚀 Quick Start
 
-## Quick Start
-
-### Hello World
+**Try the interactive demo launcher:**
 ```bash
-python3 examples/hello_world.py
+git clone https://github.com/leecorbin/pi-matrix.git
+cd pi-matrix
+python3 examples/start_here.py
 ```
 
+This shows a ZX Spectrum-style menu where you can explore all features!
+
+## ✨ Features
+
+### Graphics Primitives
+Complete drawing toolkit with RGB color support:
+- Lines, circles, ellipses, rectangles (rounded & regular)
+- Triangles, polygons, stars
+- Fill modes and colored outlines
+- Flood fill algorithm
+
+### ZX Spectrum Font System
+Retro 8×8 pixel font (ZX Spectrum character set):
+- Full ASCII + block graphics characters
+- Three text modes: pixel-positioned, grid, and buffer
+- Custom 8×8 icon registration
+- RGB foreground and background colors
+
+### Render Anywhere
+- **Development**: Terminal output with Unicode blocks (▀ ▄ █)
+- **Production**: Real LED matrices on Raspberry Pi *(coming soon)*
+- Same code, different renderer - no changes needed!
+
+### Zero Dependencies
+Pure Python standard library - runs on any Python 3.7+ system, including Raspberry Pi Zero.
+
+## 🎯 Target Hardware
+
+This system is designed for:
+- **Raspberry Pi** (Zero, 3, 4, 5)
+- **RGB LED Matrix Panels** (64×64 or 128×64 pixels)
+- Libraries like [rpi-rgb-led-matrix](https://github.com/hzeller/rpi-rgb-led-matrix)
+
+**Current Status:** Terminal emulation working. Physical LED matrix support coming soon!
+
+## 📖 Documentation
+
+### API Quick Reference
+
+#### Creating a Matrix
 ```python
 from src.led_api import create_matrix
 
-# Create a 64x64 RGB matrix
+# Create 64x64 RGB matrix
 matrix = create_matrix(64, 64, 'rgb')
-
-# Draw a circle
-matrix.circle(32, 32, 20, (0, 100, 255), fill=True)
-
-# Add text
-matrix.centered_text("HELLO", 20, (255, 255, 0))
-matrix.centered_text("WORLD!", 35, (255, 255, 255))
-
-# Display
-matrix.show()
 ```
 
-### Graphics Examples
+#### Drawing Graphics
 ```python
 # Lines
 matrix.line(0, 0, 63, 63, (255, 0, 0))
 
-# Rectangles
+# Shapes
 matrix.rect(10, 10, 40, 30, (0, 255, 0), fill=True)
-matrix.rounded_rect(15, 15, 30, 20, 5, (255, 255, 0))
-
-# Circles and ellipses
 matrix.circle(32, 32, 15, (0, 0, 255), fill=True)
-matrix.ellipse(32, 32, 20, 10, (255, 0, 255))
-
-# Stars and shapes
 matrix.star(32, 32, 12, points=5, color=(255, 255, 0), fill=True)
+
+# Advanced
+matrix.rounded_rect(15, 15, 30, 20, 5, (255, 128, 0))
+matrix.ellipse(32, 32, 20, 10, (255, 0, 255))
 matrix.triangle(10, 10, 30, 10, 20, 30, (0, 255, 255), fill=True)
 ```
 
-### Text Examples
+#### Text Rendering
 ```python
 # Pixel-positioned text
 matrix.text("HELLO", 10, 20, (255, 255, 255))
 
-# Character grid (8x8 grid on 64x64 display)
+# Grid-positioned (8x8 character grid on 64x64 display)
 matrix.text_grid("START", 1, 3, (0, 255, 0))
-
-# ZX-81 style text buffer
-lines = [
-    " READY. ",
-    "        ",
-    " 64X64  ",
-    " MATRIX ",
-]
-matrix.text_buffer(lines, (0, 255, 0), (0, 50, 0))
 
 # Centered text
 matrix.centered_text("CENTER", 30, (255, 128, 255))
+
+# ZX-81 style text buffer (full screen)
+lines = [" READY. ", "        ", " 64X64  ", " MATRIX "]
+matrix.text_buffer(lines, (0, 255, 0), (0, 50, 0))
 ```
 
-### Custom Icons
+#### Custom Icons
 ```python
-# Create a heart icon (8x8 bitmap)
+# Create 8x8 icon (heart example)
 heart = [
     0b00000000,
     0b01100110,
@@ -162,165 +116,177 @@ heart = [
     0b00000000,
 ]
 
-# Register it
+# Register and use it
 matrix.register_char('♥', heart)
-
-# Use it
 matrix.text("I ♥ LED", 10, 20, (255, 0, 0))
 ```
 
-## Available Demos
-
-Run any demo to see features in action:
-
-```bash
-python3 examples/hello_world.py          # Simple getting started
-python3 examples/graphics_showcase.py    # All drawing functions
-python3 examples/text_showcase.py        # ZX Spectrum font features
-python3 examples/combined_demo.py        # UI examples
-python3 examples/animation_demo.py       # Moving patterns
-python3 examples/plasma_demo.py          # Math effects
-python3 examples/physics_demo.py         # Bouncing balls
-python3 examples/starfield_demo.py       # Particle systems
-```
-
-## API Reference
-
-### Creating a Matrix
+#### Colors
 ```python
-from src.led_api import create_matrix
-
-# Create matrix
-matrix = create_matrix(
-    width=64,           # Display width in pixels
-    height=64,          # Display height in pixels
-    color_mode='rgb'    # 'rgb' or 'mono'
-)
-```
-
-### Graphics Functions
-```python
-# Basic
-matrix.set_pixel(x, y, color)
-matrix.clear()
-matrix.fill(color)
-
-# Lines and shapes
-matrix.line(x0, y0, x1, y1, color)
-matrix.rect(x, y, width, height, color, fill=False)
-matrix.rounded_rect(x, y, width, height, radius, color, fill=False)
-matrix.circle(cx, cy, radius, color, fill=False)
-matrix.circle_outline(cx, cy, radius, color, outline_color, thickness)
-matrix.ellipse(cx, cy, rx, ry, color, fill=False)
-matrix.triangle(x0, y0, x1, y1, x2, y2, color, fill=False)
-matrix.polygon(points, color, fill=False)
-matrix.star(cx, cy, radius, points=5, color, fill=False)
-
-# Utility
-matrix.flood_fill(x, y, color)
-matrix.border(color, thickness=1)
-matrix.grid_lines(spacing=8, color)
-```
-
-### Text Functions
-```python
-# Drawing text
-matrix.text(text, x, y, color, bg_color=None, spacing=0)
-matrix.text_grid(text, col, row, color, bg_color=None)
-matrix.text_buffer(lines, color, bg_color=None)
-matrix.char(char, x, y, color, bg_color=None)
-matrix.centered_text(text, y, color, bg_color=None)
-
-# Custom characters
-matrix.register_char(char, bitmap)
-```
-
-### Colors
-```python
-# RGB mode: Use (r, g, b) tuples
+# RGB mode: (r, g, b) tuples (0-255)
 red = (255, 0, 0)
 green = (0, 255, 0)
 blue = (0, 0, 255)
 yellow = (255, 255, 0)
-purple = (255, 0, 255)
 cyan = (0, 255, 255)
+magenta = (255, 0, 255)
 white = (255, 255, 255)
 
-# Monochrome mode: Use True/False
+# Monochrome mode: True/False
 matrix.set_pixel(x, y, True)   # On
 matrix.set_pixel(x, y, False)  # Off
 ```
 
-### Display Output
+#### Display Output
 ```python
 # Show on terminal
 matrix.show()
 
-# Advanced: Custom renderer
-from src.display import TerminalRenderer
-renderer = TerminalRenderer(matrix.get_display(), ascii_mode=False)
-matrix.show(renderer)
+# Clear display
+matrix.clear()
+
+# Fill with color
+matrix.fill((100, 100, 100))
 ```
 
-## Terminal Compatibility
+### Complete API
 
-### Unicode Support
-The default renderer uses Unicode block characters (█ ▀ ▄). If your terminal doesn't support these:
+For the full API with all available functions, see:
+- **Graphics**: Lines, shapes, polygons, stars, flood fill
+- **Text**: Multiple modes, custom fonts, icons
+- **Utilities**: Borders, grid lines, centered text
 
-```python
-# Use ASCII fallback mode
-from src.display import TerminalRenderer
-renderer = TerminalRenderer(matrix.get_display(), ascii_mode=True)
-matrix.show(renderer)
+All functions in `src/led_api.py` are documented with docstrings.
+
+## 🎨 Examples
+
+See [`examples/README.md`](examples/README.md) for detailed descriptions of all demos.
+
+**Quick demo list:**
+- `start_here.py` - **START HERE!** Interactive demo launcher
+- `hello_world.py` - Simple getting started example
+- `graphics_showcase.py` - All drawing primitives
+- `text_showcase.py` - Font system features
+- `combined_demo.py` - UI examples (progress bars, menus, etc.)
+- `animation_demo.py` - Moving patterns and effects
+- `plasma_demo.py` - Mathematical visualizations
+- `physics_demo.py` - Bouncing balls with gravity
+- `starfield_demo.py` - Particle systems and 3D effects
+- `zx_spectrum_menu.py` - Retro ZX Spectrum tribute
+
+## 🏗️ Architecture
+
+The system is designed in layers for easy hardware swapping:
+
+```
+Your Application Code
+        ↓
+  High-Level API (led_api.py)
+        ↓
+Graphics + Font (graphics.py, font.py)
+        ↓
+  Display Framebuffer (display.py)
+        ↓
+       Renderer
+    ↙         ↘
+Terminal    LED Matrix
+Renderer    Renderer*
 ```
 
-### Testing
-```bash
-python3 examples/font_test.py      # Check Unicode support
-python3 examples/aspect_test.py    # Check display aspect ratio
-```
+**\*LED Matrix Renderer coming soon!** The architecture is renderer-agnostic - your code stays the same whether outputting to terminal or real LEDs.
 
-### Recommended Fonts
+## 🔮 Roadmap
+
+- [x] Core display system
+- [x] Graphics primitives
+- [x] ZX Spectrum font
+- [x] Terminal renderer
+- [x] Demo collection
+- [ ] **GPIO/LED matrix renderer** *(in progress)*
+- [ ] Sprite/image loading
+- [ ] Animation framework
+- [ ] Network/API integration
+- [ ] 16×16 font mode
+
+## 🛠️ Terminal Compatibility
+
+The terminal renderer uses Unicode block characters (█ ▀ ▄). For best results:
+
+**Recommended fonts:**
 - **Mac**: Menlo, SF Mono, Monaco
 - **Linux**: DejaVu Sans Mono, Liberation Mono
 - **Windows**: Consolas, Cascadia Code
 
-## Design Goals
+**If you see dashes (-) or underscores (_) instead of blocks:**
+```bash
+python3 examples/font_test.py  # Diagnose the issue
+```
+
+ASCII fallback mode is available if your terminal doesn't support Unicode.
+
+## 📦 Project Structure
+
+```
+pi-matrix/
+├── src/
+│   ├── display.py       # Core framebuffer & renderer
+│   ├── graphics.py      # Drawing primitives
+│   ├── font.py          # ZX Spectrum font system
+│   └── led_api.py       # High-level user API
+├── examples/
+│   ├── start_here.py    # Interactive demo launcher (START HERE!)
+│   ├── *.py             # Various demos
+│   └── README.md        # Demo documentation
+├── LICENSE              # MIT License
+├── README.md            # This file
+└── requirements.txt     # Dependencies (none!)
+```
+
+## 🎯 Design Goals
+
 - ✅ **Lightweight**: Zero dependencies, pure Python
 - ✅ **Pi Zero compatible**: Efficient for low-power devices
-- ✅ **Fast iteration**: Develop on any machine
-- ✅ **Accurate emulation**: Terminal display matches LED matrix constraints
-- ✅ **Easy transition**: Same code works on physical hardware
+- ✅ **Fast iteration**: Develop and test on any machine
+- ✅ **Hardware-ready**: Architecture designed for easy LED matrix integration
 - ✅ **Retro aesthetic**: ZX Spectrum-inspired design
+- ✅ **Well documented**: Comprehensive examples and API docs
 
-## Future Enhancements
-- Sprite/image loading
-- Animation framework with timing
-- GPIO integration for physical LED matrix
-- Network/backend connectivity
-- 16x16 character mode
-- More built-in icons
+## 💡 Use Cases
 
-## Architecture
+- **LED Matrix Development**: Build displays on your laptop, test on Pi
+- **Retro Computing**: ZX Spectrum-style graphics and text
+- **Data Visualization**: Real-time charts and graphs
+- **Game Displays**: Score screens, menus, animations
+- **Status Displays**: System monitors, dashboards
+- **Art Projects**: Generative art, visual effects
 
-The system is designed in layers:
+## 🤝 Contributing
 
-```
-User Script (your code)
-    ↓
-High-Level API (led_api.py)
-    ↓
-Graphics + Font (graphics.py, font.py)
-    ↓
-Display Framebuffer (display.py)
-    ↓
-Renderer (TerminalRenderer / LEDMatrixRenderer)
-    ↓
-Output (Terminal / Physical LEDs)
-```
+Contributions welcome! Whether it's:
+- Bug fixes
+- New drawing primitives
+- More demos
+- Hardware integration (especially LED matrix renderers!)
+- Documentation improvements
 
-This design allows you to develop with terminal output and deploy to physical LEDs by swapping the renderer.
+## 📄 License
 
-## License
+MIT License - see [LICENSE](LICENSE) file for details.
 
-This project is designed for educational and hobbyist use with LED matrix displays.
+## 🙏 Acknowledgments
+
+- Inspired by the ZX Spectrum and ZX-81 computers
+- Font based on ZX Spectrum character set
+- Built for the LED matrix hobbyist community
+
+## 📬 Contact
+
+- **Author**: Lee Corbin
+- **Email**: code@corbin.uk
+- **GitHub**: [@leecorbin](https://github.com/leecorbin)
+
+---
+
+**Made with ❤️ for LED matrices and retro computing**
+
+*Develop anywhere, deploy to Pi!* 🚀
