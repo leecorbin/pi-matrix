@@ -1,9 +1,11 @@
-# MatrixOS: LED Matrix Operating System
+# MatrixOS: LED Matrix Application Framework
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
 
-**A lightweight, event-driven operating system for RGB LED matrix displays.** Turn your Raspberry Pi + LED matrix into a picture frame computer that runs apps, plays games, and will even one day emulate a ZX Spectrum!
+**A lightweight, event-driven application framework for RGB LED matrix displays.** Turn your Raspberry Pi + LED matrix into a picture frame computer that runs apps, plays games, and can even emulate a ZX Spectrum!
+
+MatrixOS provides an operating system-like environment on top of Raspberry Pi OS/Linux, with app management, background tasks, unified input, and a retro computing aesthetic.
 
 ```python
 from matrixos.app_framework import App
@@ -34,12 +36,13 @@ Navigate with arrow keys, press Enter to launch apps, ESC to go back.
 
 ## ✨ Key Features
 
-### Event-Driven OS Architecture
-- **Cooperative multitasking** - Apps don't manage their own loops
+### OS-Like Application Environment
+- **Cooperative multitasking** - Apps don't manage their own event loops
 - **Background processing** - Apps run tasks when inactive
 - **Screen takeover** - Background apps can request attention (timers, alerts)
 - **Universal input system** - Keyboard now, Bluetooth gamepad later
-- **60fps rendering** - Smooth animations and responsive UI
+- **60fps event loop** - Smooth animations and responsive UI
+- **Runs on Raspberry Pi OS** - Python framework on top of Linux
 
 ### Built-in Apps
 - **Launcher** - Grid-based app launcher with icons
