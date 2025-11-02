@@ -5,8 +5,22 @@ Provides OS-level app lifecycle management, event handling, and multitasking.
 """
 
 import time
+import sys
 from matrixos import async_tasks
 from matrixos.input import InputEvent
+
+# Debug logging to file
+DEBUG_LOG = None
+def debug_log(msg):
+    global DEBUG_LOG
+    if DEBUG_LOG is None:
+        try:
+            DEBUG_LOG = open('/tmp/matrixos_debug.log', 'w')
+        except:
+            DEBUG_LOG = False
+    if DEBUG_LOG:
+        DEBUG_LOG.write(f"{msg}\n")
+        DEBUG_LOG.flush()
 
 
 class App:
@@ -154,6 +168,8 @@ class OSContext:
         """
         if self.active_app == app:
             return
+
+        debug_log(f"[SWITCH] From {self.active_app.name if self.active_app else 'None'} to {app.name}")
 
         # Deactivate current app
         if self.active_app:
@@ -314,12 +330,12 @@ class OSContext:
                     # Give event to active app
                     handled = False
                     if self.active_app:
-                        # DEBUG: Print what event the app is receiving
+                        # DEBUG: Log what event the app is receiving
                         if event.key in ['c', 'C', 'r', 'R']:
-                            print(f"[DEBUG] App {self.active_app.name} receiving event: {event.key}")
+                            debug_log(f"[APP EVENT] App={self.active_app.name} event={event.key}")
                         handled = self.active_app.on_event(event)
                         if event.key in ['c', 'C', 'r', 'R']:
-                            print(f"[DEBUG] App handled={handled}, needs_keyboard={getattr(self.active_app, 'needs_keyboard', False)}")
+                            debug_log(f"[APP RESULT] handled={handled} needs_keyboard={getattr(self.active_app, 'needs_keyboard', False)}")
                     
                     # If app didn't handle BACK, let it bubble up (exit to launcher)
                     if not handled and event.key == InputEvent.BACK:
@@ -337,13 +353,16 @@ class OSContext:
             
             # Handle keyboard requests (apps needing text input)
             if self.active_app and getattr(self.active_app, 'needs_keyboard', False):
+                debug_log(f"[KEYBOARD] App {self.active_app.name} requested keyboard")
                 # Clear needs_keyboard flag immediately
                 self.active_app.needs_keyboard = False
                 
                 if hasattr(self.active_app, 'handle_city_input'):
                     # Weather app special handling (blocking keyboard)
+                    debug_log(f"[KEYBOARD] Calling handle_city_input")
                     self.active_app.handle_city_input(self.matrix, self.input)
                     self.active_app.dirty = True
+                    debug_log(f"[KEYBOARD] Returned from handle_city_input")
                 elif hasattr(self.active_app, 'handle_keyboard_input'):
                     # Generic keyboard handling (blocking)
                     self.active_app.handle_keyboard_input(self.matrix, self.input)
