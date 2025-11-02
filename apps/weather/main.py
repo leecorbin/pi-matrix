@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from matrixos.app_framework import App
 from matrixos.input import InputEvent
+from matrixos.async_tasks import schedule_task, TaskResult
 
 
 class WeatherApp(App):
@@ -67,30 +68,54 @@ class WeatherApp(App):
                     self.request_attention(priority='normal')
 
     def fetch_weather(self):
-        """Simulate fetching weather data.
+        """Fetch weather data using async task (non-blocking!).
 
-        In real app, this would call a weather API.
-        For demo, we generate random weather.
+        This method returns immediately. The actual fetch happens in
+        a background thread, and the callback updates the weather data.
         """
+        if self.loading:
+            return  # Already fetching
+        
         self.loading = True
         self.last_fetch = time.time()
-
-        # Simulate API call delay
-        # In real app, you'd use threading or async
-        # For demo, we just update immediately
-        time.sleep(0.1)  # Simulate brief fetch
-
-        # Generate random weather (for demo)
-        # Cardiff typically has mild temperatures (8-18°C) and lots of rain!
-        self.last_condition = self.condition
-
-        # Make it rain more often in Cardiff ;)
-        weather_choices = ["rainy"] * 4 + ["cloudy"] * 3 + ["sunny"] * 2 + ["stormy"] * 1
-        self.condition = random.choice(weather_choices)
-        self.temperature = random.randint(8, 18)
-        self.update_count += 1
-
-        self.loading = False
+        
+        def fetch_in_background():
+            """This runs in a background thread - doesn't block UI!"""
+            # Simulate network delay
+            time.sleep(0.5)  # This is OK now - runs in background!
+            
+            # Generate random weather (for demo)
+            # Cardiff typically has mild temperatures (8-18°C) and lots of rain!
+            weather_choices = ["rainy"] * 4 + ["cloudy"] * 3 + ["sunny"] * 2 + ["stormy"] * 1
+            condition = random.choice(weather_choices)
+            temperature = random.randint(8, 18)
+            
+            return {
+                'condition': condition,
+                'temperature': temperature
+            }
+        
+        def on_fetch_complete(result: TaskResult):
+            """This runs on main thread when fetch completes."""
+            self.loading = False
+            
+            if result.success:
+                data = result.result
+                old_condition = self.condition
+                
+                self.condition = data['condition']
+                self.temperature = data['temperature']
+                self.update_count += 1
+                
+                # Request attention for severe weather (storms)
+                if old_condition != self.condition and not self.active:
+                    if self.condition == "stormy":
+                        self.request_attention(priority='normal')
+            else:
+                print(f"Weather fetch failed: {result.error}")
+        
+        # Schedule the task - returns immediately!
+        schedule_task(fetch_in_background, on_fetch_complete, self.name)
 
     def on_event(self, event):
         """Handle input."""

@@ -5,6 +5,7 @@ Provides OS-level app lifecycle management, event handling, and multitasking.
 """
 
 import time
+from matrixos import async_tasks
 
 
 class App:
@@ -248,6 +249,9 @@ class OSContext:
         """
         # Reset running flag (in case we're re-entering after a previous run)
         self.running = True
+        
+        # Start async task manager
+        async_tasks.get_task_manager().start()
 
         last_time = time.time()
         last_background_tick = time.time()
@@ -258,6 +262,9 @@ class OSContext:
             current_time = frame_start
             delta_time = current_time - last_time
             last_time = current_time
+            
+            # Process completed async tasks (invoke callbacks on main thread)
+            async_tasks.process_completed_tasks()
 
             # Handle system-level input events
             event = self.input.get_key(timeout=0.001)
@@ -330,3 +337,6 @@ class OSContext:
             sleep_time = max(0, frame_time - frame_elapsed)
             if sleep_time > 0:
                 time.sleep(sleep_time)
+        
+        # Clean up async tasks when exiting
+        async_tasks.get_task_manager().stop()
