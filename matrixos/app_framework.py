@@ -19,6 +19,7 @@ class App:
         self.name = name
         self.os = None  # Set by OS when registered
         self.active = False
+        self.dirty = True  # Needs redraw?
 
     def get_help_text(self):
         """Return list of (key, description) tuples for app-specific controls.
@@ -34,7 +35,7 @@ class App:
 
         Use this to initialize UI, start animations, etc.
         """
-        pass
+        self.dirty = True  # Always redraw on activation
 
     def on_deactivate(self):
         """Called when app goes to background.
@@ -75,6 +76,8 @@ class App:
         Returns:
             True if event was handled, False otherwise
         """
+        # Mark dirty when event happens (likely changes UI)
+        self.dirty = True
         return False
 
     def render(self, matrix):
@@ -86,7 +89,7 @@ class App:
         Called by OS after on_update(). Draw your UI here.
         Don't call matrix.show() - OS does that!
         """
-        pass
+        self.dirty = False  # Clear dirty flag after render
 
     def request_attention(self, priority='normal'):
         """Request OS to bring this app to foreground.
@@ -276,10 +279,15 @@ class OSContext:
                     self.showing_help = not self.showing_help
                     if not self.showing_help:
                         self.help_scroll = 0
+                    # Mark active app as needing redraw
+                    if self.active_app:
+                        self.active_app.dirty = True
                 elif self.showing_help:
                     # Handle scrolling in help screen
                     if event.key == 'UP':
                         self.help_scroll = max(0, self.help_scroll - 1)
+                        if self.active_app:
+                            self.active_app.dirty = True
                     elif event.key == 'DOWN':
                         # Calculate max scroll based on help content
                         app_help_count = len(self.active_app.get_help_text()) if self.active_app else 0
@@ -287,10 +295,14 @@ class OSContext:
                         visible_lines = (self.matrix.height - 14 - 16) // 8
                         max_scroll = max(0, total_items - visible_lines)
                         self.help_scroll = min(max_scroll, self.help_scroll + 1)
+                        if self.active_app:
+                            self.active_app.dirty = True
                     elif event.key == 'BACK':
                         # Close help
                         self.showing_help = False
                         self.help_scroll = 0
+                        if self.active_app:
+                            self.active_app.dirty = True
                 else:
                     # Give event to active app first
                     handled = False
@@ -315,15 +327,16 @@ class OSContext:
             if self.active_app:
                 self.active_app.on_update(delta_time)
 
-                # Render
-                self.matrix.clear()
-                if self.showing_help:
-                    # Show help overlay
-                    self.render_help_overlay()
-                else:
-                    # Show normal app UI
-                    self.active_app.render(self.matrix)
-                self.matrix.show()
+                # Only render if something changed (dirty flag)
+                if self.active_app.dirty:
+                    self.matrix.clear()
+                    if self.showing_help:
+                        # Show help overlay
+                        self.render_help_overlay()
+                    else:
+                        # Show normal app UI
+                        self.active_app.render(self.matrix)
+                    self.matrix.show()
 
             # Background tasks (~1 per second)
             if current_time - last_background_tick >= 1.0:

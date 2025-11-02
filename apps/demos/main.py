@@ -63,6 +63,10 @@ class DemosApp(App):
     def on_update(self, delta_time):
         """Update animations."""
         self.animation_time += delta_time
+        
+        # If we're in a demo (not menu), mark as dirty for continuous rendering
+        if self.current_demo is not None:
+            self.dirty = True
 
     def on_event(self, event):
         """Handle input."""
