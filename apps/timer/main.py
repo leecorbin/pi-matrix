@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from matrixos.app_framework import App
 from matrixos.input import InputEvent
+from matrixos import layout
 
 
 class TimerApp(App):
@@ -114,9 +115,10 @@ class TimerApp(App):
         return False
 
     def render(self, matrix):
-        """Draw the timer UI."""
+        """Draw the timer UI - responsive to screen size!"""
         width = matrix.width
         height = matrix.height
+        icon_size = layout.get_icon_size(matrix)
 
         if self.alarm_triggered:
             # Alarm screen - flash red
@@ -124,62 +126,49 @@ class TimerApp(App):
 
             if flash:
                 matrix.fill((255, 0, 0))
-                matrix.centered_text("TIME'S", height // 2 - 8, (255, 255, 255))
-                matrix.centered_text("UP!", height // 2 + 2, (255, 255, 255))
-                matrix.centered_text("PRESS ANY KEY", height - 12, (255, 255, 0))
+                layout.center_text(matrix, "TIME'S", height // 2 - 8, (255, 255, 255))
+                layout.center_text(matrix, "UP!", height // 2 + 2, (255, 255, 255))
+                layout.center_text(matrix, "PRESS ANY KEY", height - 12, (255, 255, 0))
             else:
                 matrix.fill((100, 0, 0))
-                matrix.centered_text("TIME'S", height // 2 - 8, (200, 200, 200))
-                matrix.centered_text("UP!", height // 2 + 2, (200, 200, 200))
+                layout.center_text(matrix, "TIME'S", height // 2 - 8, (200, 200, 200))
+                layout.center_text(matrix, "UP!", height // 2 + 2, (200, 200, 200))
 
         elif self.setting_mode:
             # Setting screen
             matrix.text("TIMER", 2, 2, (0, 255, 255))
 
-            # Show preset options
-            start_y = 16
-            for i, preset in enumerate(self.preset_times):
-                y = start_y + i * 10
-                if y + 8 > height - 10:
-                    break
+            # Use menu_list helper for preset selection!
+            preset_items = [f"{p}s" for p in self.preset_times]
+            layout.menu_list(matrix, preset_items, self.selected_preset, y_start=16)
 
-                if i == self.selected_preset:
-                    # Selected
-                    matrix.text(">", 4, y, (255, 255, 0))
-                    matrix.text(f"{preset}s", 12, y, (255, 255, 255))
-                else:
-                    matrix.text(f"{preset}s", 12, y, (100, 100, 100))
-
-            # Instructions
-            matrix.text("ENTER=START", 2, height - 8, (150, 150, 150))
+            # Instructions at bottom
+            layout.center_text(matrix, "ENTER=START", height - 8, (150, 150, 150))
 
         else:
             # Timer running/paused
             matrix.text("TIMER", 2, 2, (0, 255, 255))
 
-            # Progress bar
+            # Progress bar using layout helper!
             progress = self.countdown / self.total_time if self.total_time > 0 else 0
-            bar_width = width - 8
-            bar_x = 4
-            bar_y = 20
+            bar_y = 20 if width < 100 else 30
+            bar_color = (0, 255, 0) if self.timer_running else (255, 165, 0)
+            
+            layout.draw_progress_bar(matrix, 4, bar_y, width - 8, 10, 
+                                    progress, fg_color=bar_color)
 
-            matrix.rect(bar_x, bar_y, bar_width, 10, (50, 50, 50), fill=True)
-            filled_width = int(bar_width * progress)
-            if filled_width > 0:
-                color = (0, 255, 0) if self.timer_running else (255, 165, 0)
-                matrix.rect(bar_x, bar_y, filled_width, 10, color, fill=True)
-
-            # Time remaining (large)
+            # Time remaining (large, centered)
             time_text = f"{int(self.countdown)}s"
-            matrix.centered_text(time_text, height // 2 + 8, (255, 255, 255))
+            layout.center_text(matrix, time_text, height // 2 + 8, (255, 255, 255))
 
-            # Status
+            # Status text (centered)
+            status_y = height - 16 if width < 100 else height - 20
             if self.timer_running:
-                matrix.centered_text("RUNNING", height - 16, (0, 255, 0))
-                matrix.centered_text("SPC=PAUSE C=STOP", height - 8, (150, 150, 150))
+                layout.center_text(matrix, "RUNNING", status_y, (0, 255, 0))
+                layout.center_text(matrix, "SPC=PAUSE C=STOP", height - 8, (150, 150, 150))
             else:
-                matrix.centered_text("PAUSED", height - 16, (255, 165, 0))
-                matrix.centered_text("SPC=RESUME C=STOP", height - 8, (150, 150, 150))
+                layout.center_text(matrix, "PAUSED", status_y, (255, 165, 0))
+                layout.center_text(matrix, "SPC=RESUME C=STOP", height - 8, (150, 150, 150))
 
 
 def run(os_context):

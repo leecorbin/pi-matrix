@@ -186,6 +186,35 @@ matrix.centered_text("MATRIXOS", 64, (0, 255, 255))
 matrix.text_grid("READY", 2, 4, (0, 255, 0))
 ```
 
+### Layout Helpers
+
+MatrixOS provides simple helpers for common UI patterns:
+
+```python
+from matrixos import layout
+
+# Center text horizontally/vertically
+layout.center_text(matrix, "HELLO", y=20, color=(255, 255, 0))
+
+# Scrollable menus
+items = ["Option 1", "Option 2", "Option 3"]
+layout.menu_list(matrix, items, selected_index=1)
+
+# Progress bars
+layout.draw_progress_bar(matrix, 10, 30, 100, 8, progress=0.75)
+
+# Icon + text combos
+layout.draw_icon_with_text(matrix, "☼", "Sunny", 10, 20)
+
+# Responsive sizing (16px for 64×64, 32px for 128×128)
+icon_size = layout.get_icon_size(matrix)
+
+# Multi-column layouts
+cols = layout.split_columns(matrix, num_columns=2)
+```
+
+See `examples/layout_demo.py` for complete examples!
+
 ### Utilities
 
 ```python

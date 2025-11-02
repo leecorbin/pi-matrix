@@ -181,6 +181,139 @@ Apps don't need to handle these - OS does:
 - **Q** - Quit entire OS
 - **Ctrl+C** - Emergency exit
 
+## Layout System
+
+MatrixOS provides simple layout helpers in `matrixos.layout` for clean, responsive UI code.
+
+### Philosophy
+
+**Keep it simple!** MatrixOS apps are straightforward - they don't need React-style reactivity. Our layout helpers provide 90% of the benefit with 10% of the complexity.
+
+### Common Helpers
+
+```python
+from matrixos import layout
+
+# Center text horizontally/vertically
+layout.center_text(matrix, "HELLO", y=20, color=(255, 255, 0))
+layout.center_text(matrix, "CENTERED!", color=(0, 255, 255))  # Both axes
+
+# Draw scrollable menus
+items = ["Option 1", "Option 2", "Option 3"]
+layout.menu_list(matrix, items, selected_index=1)
+
+# Progress bars
+layout.draw_progress_bar(matrix, x=10, y=30, width=100, height=8, 
+                        progress=0.75, fg_color=(0, 255, 0))
+
+# Icon + text combos
+layout.draw_icon_with_text(matrix, "☼", "Sunny", 10, 20,
+                          icon_color=(255, 255, 0))
+
+# Responsive icon sizing (16px for 64×64, 32px for 128×128)
+icon_size = layout.get_icon_size(matrix)
+
+# Multi-column layouts
+cols = layout.split_columns(matrix, num_columns=2, padding=4)
+x1, width1 = cols[0]
+x2, width2 = cols[1]
+
+# Grid positioning
+cols, rows = layout.get_grid_dimensions(matrix, item_size=32, padding=4)
+x, y = layout.grid_position(index=5, cols=cols, item_size=32)
+```
+
+### Responsive Design
+
+Apps should adapt to different resolutions:
+
+```python
+def render(self, matrix):
+    # Get appropriate sizes for this resolution
+    icon_size = layout.get_icon_size(matrix)  # 16/32/48px
+    scale = icon_size / 16  # Scale factor
+    
+    # Scale your drawings
+    radius = int(8 * scale)
+    matrix.circle(matrix.width // 2, 30, radius, (255, 0, 0), fill=True)
+    
+    # Use helpers for automatic centering
+    layout.center_text(matrix, f"{self.count}", color=(255, 255, 255))
+```
+
+See `examples/layout_demo.py` for complete examples of all helpers.
+
+## Network Module
+
+MatrixOS provides async HTTP client in `matrixos.network` for non-blocking network I/O.
+
+**Zero dependencies** - uses Python standard library (`urllib`) only.
+
+### Basic Usage
+
+```python
+from matrixos import network
+
+class WeatherApp(App):
+    def __init__(self):
+        super().__init__("Weather")
+        self.temperature = None
+        self.loading = True
+    
+    def on_activate(self):
+        # Fetch weather when app opens
+        self.fetch_weather()
+    
+    def fetch_weather(self):
+        def on_response(result):
+            """Called on main thread when fetch completes"""
+            self.loading = False
+            
+            if result.success:
+                data = result.value  # Parsed JSON
+                self.temperature = data['temp']
+                self.dirty = True  # Trigger redraw
+            else:
+                print(f"Error: {result.error}")
+        
+        # Non-blocking GET request with JSON parsing
+        url = "https://api.weather.com/current?location=Cardiff"
+        network.get_json(url, callback=on_response, timeout=5.0)
+```
+
+### API Reference
+
+```python
+# Simple convenience functions
+network.get(url, callback, timeout=10.0)
+network.get_json(url, callback, timeout=10.0)
+network.post(url, data, callback, timeout=10.0)
+network.post_json(url, data, callback, timeout=10.0)
+
+# Or create a client with custom settings
+client = network.NetworkClient(timeout=5.0, user_agent="MyApp/1.0")
+client.get_json(url, callback=on_response)
+```
+
+### Error Handling
+
+```python
+def on_response(result):
+    if result.success:
+        data = result.value
+        # Use data...
+    else:
+        error = result.error
+        if isinstance(error, network.TimeoutError):
+            print("Request timed out")
+        elif isinstance(error, network.HTTPError):
+            print(f"HTTP {error.code}")
+        elif isinstance(error, network.ConnectionError):
+            print("Connection failed")
+```
+
+**Important**: All callbacks run on the main thread, so UI updates are safe!
+
 ## Future Possibilities
 
 With this architecture, we can add:

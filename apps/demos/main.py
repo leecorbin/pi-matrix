@@ -22,6 +22,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from matrixos.app_framework import App
 from matrixos.input import InputEvent
+from matrixos import layout  # NEW: Simple layout helpers
 
 
 class DemosApp(App):
@@ -110,44 +111,15 @@ class DemosApp(App):
 
     def render_menu(self, matrix):
         """Draw the demo selection menu."""
-        width = matrix.width
-        height = matrix.height
-
         # Title
         matrix.text("DEMOS", 2, 2, (255, 200, 0))
 
-        # Menu items
-        start_y = 14
-        item_height = 9
-        visible_items = min(6, len(self.demos))
-
-        # Calculate scroll offset
-        if len(self.demos) > visible_items:
-            scroll_start = max(0, min(self.selected_index - 2, len(self.demos) - visible_items))
-            items_to_show = self.demos[scroll_start:scroll_start + visible_items]
-            selected_offset = self.selected_index - scroll_start
-        else:
-            items_to_show = self.demos
-            selected_offset = self.selected_index
-
-        y = start_y
-        for i, (name, _) in enumerate(items_to_show):
-            is_selected = (i == selected_offset)
-
-            if is_selected:
-                # Highlight selected
-                matrix.rect(2, y - 1, width - 4, 8, (255, 200, 0), fill=True)
-                text_color = (0, 0, 0)
-                matrix.text(">", 4, y, text_color)
-                matrix.text(name.upper(), 12, y, text_color)
-            else:
-                text_color = (150, 150, 150)
-                matrix.text(name.upper(), 12, y, text_color)
-
-            y += item_height
+        # Use the new menu_list helper!
+        demo_names = [name for name, _ in self.demos]
+        layout.menu_list(matrix, demo_names, self.selected_index)
 
         # Navigation hint
-        matrix.text("^v:NAV ENTER:RUN", 2, height - 8, (100, 100, 100))
+        matrix.text("^v:NAV ENTER:RUN", 2, matrix.height - 8, (100, 100, 100))
 
     # =========================================================================
     # DEMO 1: Text Rendering

@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from matrixos.app_framework import App
 from matrixos.input import InputEvent
 from matrixos.async_tasks import schedule_task, TaskResult
+from matrixos import network, layout
 
 
 class WeatherApp(App):
@@ -30,10 +31,11 @@ class WeatherApp(App):
         self.temperature = 20
         self.condition = "sunny"
         self.last_fetch = 0
-        self.fetch_interval = 5  # Fetch every 5 seconds
+        self.fetch_interval = 300  # Fetch every 5 minutes (was 5 seconds - too aggressive!)
         self.loading = True
         self.update_count = 0
         self.last_condition = None
+        self.use_demo_mode = True  # Set to False to use real API
 
         # Weather conditions typical for Cardiff
         self.conditions = [
@@ -68,7 +70,7 @@ class WeatherApp(App):
                     self.request_attention(priority='normal')
 
     def fetch_weather(self):
-        """Fetch weather data using async task (non-blocking!).
+        """Fetch weather data using async network (non-blocking!).
 
         This method returns immediately. The actual fetch happens in
         a background thread, and the callback updates the weather data.
@@ -79,43 +81,75 @@ class WeatherApp(App):
         self.loading = True
         self.last_fetch = time.time()
         
-        def fetch_in_background():
-            """This runs in a background thread - doesn't block UI!"""
-            # Simulate network delay
-            time.sleep(0.5)  # This is OK now - runs in background!
-            
-            # Generate random weather (for demo)
-            # Cardiff typically has mild temperatures (8-18°C) and lots of rain!
-            weather_choices = ["rainy"] * 4 + ["cloudy"] * 3 + ["sunny"] * 2 + ["stormy"] * 1
-            condition = random.choice(weather_choices)
-            temperature = random.randint(8, 18)
-            
-            return {
-                'condition': condition,
-                'temperature': temperature
-            }
-        
-        def on_fetch_complete(result: TaskResult):
-            """This runs on main thread when fetch completes."""
-            self.loading = False
-            
-            if result.success:
-                data = result.result
-                old_condition = self.condition
+        if self.use_demo_mode:
+            # Demo mode: Simulate network fetch
+            def fetch_in_background():
+                """This runs in a background thread - doesn't block UI!"""
+                time.sleep(0.5)  # Simulate network delay
                 
-                self.condition = data['condition']
-                self.temperature = data['temperature']
-                self.update_count += 1
+                # Generate random weather (for demo)
+                weather_choices = ["rainy"] * 4 + ["cloudy"] * 3 + ["sunny"] * 2 + ["stormy"] * 1
+                condition = random.choice(weather_choices)
+                temperature = random.randint(8, 18)
                 
-                # Request attention for severe weather (storms)
-                if old_condition != self.condition and not self.active:
-                    if self.condition == "stormy":
-                        self.request_attention(priority='normal')
-            else:
-                print(f"Weather fetch failed: {result.error}")
-        
-        # Schedule the task - returns immediately!
-        schedule_task(fetch_in_background, on_fetch_complete, self.name)
+                return {
+                    'condition': condition,
+                    'temperature': temperature
+                }
+            
+            def on_fetch_complete(result: TaskResult):
+                """This runs on main thread when fetch completes."""
+                self.loading = False
+                
+                if result.success:
+                    data = result.result
+                    old_condition = self.condition
+                    
+                    self.condition = data['condition']
+                    self.temperature = data['temperature']
+                    self.update_count += 1
+                    
+                    # Request attention for severe weather (storms)
+                    if old_condition != self.condition and not self.active:
+                        if self.condition == "stormy":
+                            self.request_attention(priority='normal')
+                else:
+                    print(f"Weather fetch failed: {result.error}")
+            
+            schedule_task(fetch_in_background, on_fetch_complete, self.name)
+        else:
+            # Real API mode (requires API key and setup)
+            # Example: OpenWeatherMap API
+            # url = f"https://api.openweathermap.org/data/2.5/weather?q={self.location}&appid=YOUR_KEY&units=metric"
+            
+            def on_weather_response(result: TaskResult):
+                """Called when API response arrives."""
+                self.loading = False
+                
+                if result.success:
+                    data = result.value
+                    # Parse API response (adjust for your API format)
+                    self.temperature = int(data.get('main', {}).get('temp', 20))
+                    weather_main = data.get('weather', [{}])[0].get('main', 'Clear').lower()
+                    
+                    # Map API weather to our conditions
+                    if 'rain' in weather_main or 'drizzle' in weather_main:
+                        self.condition = 'rainy'
+                    elif 'cloud' in weather_main:
+                        self.condition = 'cloudy'
+                    elif 'thunder' in weather_main or 'storm' in weather_main:
+                        self.condition = 'stormy'
+                    else:
+                        self.condition = 'sunny'
+                    
+                    self.update_count += 1
+                    self.dirty = True
+                else:
+                    print(f"Weather API error: {result.error}")
+            
+            # Uncomment to use real API:
+            # network.get_json(url, callback=on_weather_response, timeout=5.0)
+            pass
 
     def on_event(self, event):
         """Handle input."""
@@ -126,73 +160,86 @@ class WeatherApp(App):
         return False
 
     def render(self, matrix):
-        """Draw weather UI."""
+        """Draw weather UI - responsive to screen size!"""
         width = matrix.width
         height = matrix.height
+        icon_size = layout.get_icon_size(matrix)  # 16px for 64×64, 32px for 128×128
 
         # Title with location
         matrix.text("WEATHER", 2, 2, (0, 255, 255))
         matrix.text(self.location.upper(), 2, 10, (100, 100, 100))
 
         if self.loading:
-            matrix.centered_text("LOADING...", height // 2, (150, 150, 150))
+            layout.center_text(matrix, "LOADING...", color=(150, 150, 150))
             return
 
-        # Weather icon (centered at top)
-        icon_y = 16
+        # Weather icon (centered at top, size depends on resolution)
+        icon_y = 20 if width < 100 else 30
         icon_color = next(c[1] for c in self.conditions if c[0] == self.condition)
+        scale = icon_size / 16  # Scale factor for larger displays
 
         if self.condition == "sunny":
             # Sun
-            matrix.circle(width // 2, icon_y, 8, icon_color, fill=True)
+            radius = int(8 * scale)
+            matrix.circle(width // 2, icon_y, radius, icon_color, fill=True)
             # Rays
             for angle in range(0, 360, 45):
                 import math
                 rad = math.radians(angle)
-                x1 = int(width // 2 + 10 * math.cos(rad))
-                y1 = int(icon_y + 10 * math.sin(rad))
-                x2 = int(width // 2 + 14 * math.cos(rad))
-                y2 = int(icon_y + 14 * math.sin(rad))
+                x1 = int(width // 2 + (10 * scale) * math.cos(rad))
+                y1 = int(icon_y + (10 * scale) * math.sin(rad))
+                x2 = int(width // 2 + (14 * scale) * math.cos(rad))
+                y2 = int(icon_y + (14 * scale) * math.sin(rad))
                 matrix.line(x1, y1, x2, y2, icon_color)
 
         elif self.condition == "cloudy":
-            # Cloud
-            matrix.circle(width // 2 - 4, icon_y, 4, icon_color, fill=True)
-            matrix.circle(width // 2, icon_y - 2, 5, icon_color, fill=True)
-            matrix.circle(width // 2 + 4, icon_y, 4, icon_color, fill=True)
-            matrix.rect(width // 2 - 8, icon_y, 16, 4, icon_color, fill=True)
+            # Cloud (scaled for resolution)
+            r1, r2, r3 = int(4 * scale), int(5 * scale), int(4 * scale)
+            matrix.circle(width // 2 - int(4 * scale), icon_y, r1, icon_color, fill=True)
+            matrix.circle(width // 2, icon_y - int(2 * scale), r2, icon_color, fill=True)
+            matrix.circle(width // 2 + int(4 * scale), icon_y, r3, icon_color, fill=True)
+            matrix.rect(width // 2 - int(8 * scale), icon_y, int(16 * scale), int(4 * scale), icon_color, fill=True)
 
         elif self.condition == "rainy":
-            # Cloud + rain
-            matrix.circle(width // 2 - 3, icon_y - 4, 3, (150, 150, 150), fill=True)
-            matrix.circle(width // 2, icon_y - 6, 4, (150, 150, 150), fill=True)
-            matrix.circle(width // 2 + 3, icon_y - 4, 3, (150, 150, 150), fill=True)
+            # Cloud + rain (scaled)
+            r1, r2, r3 = int(3 * scale), int(4 * scale), int(3 * scale)
+            matrix.circle(width // 2 - int(3 * scale), icon_y - int(4 * scale), r1, (150, 150, 150), fill=True)
+            matrix.circle(width // 2, icon_y - int(6 * scale), r2, (150, 150, 150), fill=True)
+            matrix.circle(width // 2 + int(3 * scale), icon_y - int(4 * scale), r3, (150, 150, 150), fill=True)
             # Rain drops
-            for i in range(3):
-                x = width // 2 - 4 + i * 4
-                matrix.line(x, icon_y + 2, x, icon_y + 6, icon_color)
+            for i in range(int(3 * scale)):
+                x = width // 2 - int(4 * scale) + i * int(4 * scale / 3)
+                matrix.line(x, icon_y + int(2 * scale), x, icon_y + int(6 * scale), icon_color)
 
         elif self.condition == "stormy":
-            # Cloud + lightning
-            matrix.circle(width // 2 - 3, icon_y - 4, 3, (100, 100, 100), fill=True)
-            matrix.circle(width // 2, icon_y - 6, 4, (100, 100, 100), fill=True)
-            matrix.circle(width // 2 + 3, icon_y - 4, 3, (100, 100, 100), fill=True)
-            # Lightning
-            matrix.line(width // 2, icon_y, width // 2 - 2, icon_y + 4, (255, 255, 0))
-            matrix.line(width // 2 - 2, icon_y + 4, width // 2 + 1, icon_y + 4, (255, 255, 0))
-            matrix.line(width // 2 + 1, icon_y + 4, width // 2 - 1, icon_y + 8, (255, 255, 0))
+            # Cloud + lightning (scaled)
+            r1, r2, r3 = int(3 * scale), int(4 * scale), int(3 * scale)
+            matrix.circle(width // 2 - int(3 * scale), icon_y - int(4 * scale), r1, (100, 100, 100), fill=True)
+            matrix.circle(width // 2, icon_y - int(6 * scale), r2, (100, 100, 100), fill=True)
+            matrix.circle(width // 2 + int(3 * scale), icon_y - int(4 * scale), r3, (100, 100, 100), fill=True)
+            # Lightning bolt
+            cx = width // 2
+            matrix.line(cx, icon_y, cx - int(2 * scale), icon_y + int(4 * scale), (255, 255, 0))
+            matrix.line(cx - int(2 * scale), icon_y + int(4 * scale), cx + int(1 * scale), icon_y + int(4 * scale), (255, 255, 0))
+            matrix.line(cx + int(1 * scale), icon_y + int(4 * scale), cx - int(1 * scale), icon_y + int(8 * scale), (255, 255, 0))
 
-        # Temperature (large)
+        # Temperature (large, centered)
         temp_text = f"{self.temperature}C"
-        matrix.centered_text(temp_text, height // 2 + 8, (255, 255, 255))
+        temp_y = height // 2 + int(8 * scale)
+        layout.center_text(matrix, temp_text, temp_y, (255, 255, 255))
 
         # Condition text
-        matrix.centered_text(self.condition.upper(), height // 2 + 18, icon_color)
+        cond_y = temp_y + 10
+        layout.center_text(matrix, self.condition.upper(), cond_y, icon_color)
 
-        # Update info (simple)
+        # Update info at bottom
         time_since = int(time.time() - self.last_fetch)
-        status_text = f"{time_since}s ago"
-        matrix.centered_text(status_text, height - 10, (80, 80, 80))
+        mins = time_since // 60
+        if mins > 0:
+            status_text = f"{mins}m ago"
+        else:
+            status_text = f"{time_since}s ago"
+        layout.center_text(matrix, status_text, height - 10, (80, 80, 80))
 
 
 def run(os_context):

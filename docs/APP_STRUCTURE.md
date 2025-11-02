@@ -5,16 +5,44 @@ Each app lives in its own folder under the root directory. The launcher automati
 ## Required Files
 
 ### 1. `main.py`
-The entry point for your app. Must contain a `main()` function that will be called when the app is launched.
+The entry point for your app. Must use the MatrixOS App framework.
 
 ```python
-def main():
-    """App entry point"""
-    # Your app code here
-    pass
+from matrixos.app_framework import App
+from matrixos import layout  # Optional: UI helpers
+
+class MyApp(App):
+    def __init__(self):
+        super().__init__("My App")
+        self.count = 0
+    
+    def on_event(self, event):
+        if event.key == ' ':
+            self.count += 1
+            return True
+        return False
+    
+    def render(self, matrix):
+        # Use layout helpers for clean code!
+        layout.center_text(matrix, f"Count: {self.count}", 
+                          color=(0, 255, 255))
+
+def run(os_context):
+    """Called by MatrixOS"""
+    app = MyApp()
+    os_context.register_app(app)
+    os_context.switch_to_app(app)
 
 if __name__ == '__main__':
-    main()
+    # Standalone testing mode
+    from matrixos.display import MatrixDisplay
+    from matrixos.input import InputHandler
+    from matrixos.app_framework import OSContext
+    
+    matrix = MatrixDisplay(width=128, height=128)
+    input_handler = InputHandler()
+    os_context = OSContext(matrix, input_handler)
+    run(os_context)
 ```
 
 ### 2. `config.json`
