@@ -111,6 +111,28 @@ LED matrices draw significant current!
 - **Connector:** Barrel jack (5.5mm×2.1mm) or screw terminals
 - **Quality:** Use reputable brands (Mean Well, Adafruit, official Pi PSU)
 
+**Recommended Power Supplies (UK):**
+
+**For 128×128 (2 panels) - 5V 10A Required:**
+- **Mean Well RS-50-5** - £20-25, industrial quality, very reliable
+  - [Amazon UK](https://www.amazon.co.uk/s?k=mean+well+rs-50-5)
+- **BTF-LIGHTING 5V 10A Power Supply** - £15-20
+  - [Amazon UK](https://www.amazon.co.uk/s?k=5v+10a+power+supply+led)
+
+**For 64×64 (1 panel) - 5V 5A Sufficient:**
+- **BTF-LIGHTING 5V 5A Power Supply** - £10-15
+  - [Amazon UK](https://www.amazon.co.uk/s?k=5v+5a+power+supply)
+
+**For 256×192 (6 panels) - 5V 20A Required:**
+- **Mean Well SE-200-5** - £50-60, professional grade
+  - [Amazon UK](https://www.amazon.co.uk/s?k=mean+well+se-200-5)
+
+**⚠️ CRITICAL: DO NOT use undersized power supplies!**
+- The 5V 2A supply you linked is **NOT suitable** for LED matrix panels
+- 2A supplies are for Pi only, or single small devices
+- LED panels need 5-20A depending on configuration
+- Using undersized PSU = flickering, overheating, fire risk
+
 **⚠️ SAFETY WARNING:**
 - Never use cheap unbranded PSUs - fire hazard!
 - Always use PSU with over-current protection
@@ -273,11 +295,18 @@ For sound effects, music, and ZX Spectrum beeper emulation.
 - Raspberry Pi Zero 2 W - £15
 - 2× 64×64 RGB LED Panel (P3, indoor) - £50
 - Adafruit RGB Matrix Bonnet - £18
-- 5V 10A Power Supply (Mean Well) - £30
+- **5V 10A Power Supply (Mean Well RS-50-5 or BTF-LIGHTING)** - £20-25
 - 32GB MicroSD Card (A2) - £10
 - Bluetooth Gamepad (8BitDo Zero 2) - £25
 - 2× Mini Speakers 8Ω 1W - £10
 - Picade Max USB Audio - £20
+
+**Total: ~£168-173**
+
+**Power Draw:**
+- Max: 6-8A @ 5V (full white)
+- Typical: 3-4A @ 5V (normal usage)
+- **10A PSU required** (adequate headroom)
 - Heatsink for Pi Zero - £3
 - M3 mounting hardware - £5
 
