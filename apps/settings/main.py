@@ -31,7 +31,6 @@ class SettingsApp(App):
         self.menu_items = [
             "Display Info",
             "Resolution",
-            "Weather City",
             "Demo Mode",
             "About MatrixOS",
         ]
@@ -42,7 +41,6 @@ class SettingsApp(App):
         # Settings values (would normally be persisted)
         self.settings = {
             "resolution": "128x128",
-            "weather_city": "Cardiff, UK",
             "demo_mode": True,
         }
         
@@ -67,10 +65,6 @@ class SettingsApp(App):
                 return True
         elif self.current_view == "resolution":
             return self.handle_resolution_input(event)
-        elif self.current_view == "weather_city":
-            if event.key == InputEvent.BACK:
-                self.current_view = "menu"
-                return True
         elif self.current_view == "demo_mode":
             return self.handle_demo_mode_input(event)
         elif self.current_view == "about":
@@ -95,8 +89,6 @@ class SettingsApp(App):
                 self.current_view = "display_info"
             elif selected == "Resolution":
                 self.current_view = "resolution"
-            elif selected == "Weather City":
-                self.current_view = "weather_city"
             elif selected == "Demo Mode":
                 self.current_view = "demo_mode"
             elif selected == "About MatrixOS":
@@ -140,8 +132,6 @@ class SettingsApp(App):
             self.render_display_info(matrix)
         elif self.current_view == "resolution":
             self.render_resolution(matrix)
-        elif self.current_view == "weather_city":
-            self.render_weather_city(matrix)
         elif self.current_view == "demo_mode":
             self.render_demo_mode(matrix)
         elif self.current_view == "about":
@@ -212,52 +202,6 @@ class SettingsApp(App):
         
         # Hint
         matrix.text("^v:SELECT ESC:BACK", 2, height - 8, (100, 100, 100))
-
-    def render_weather_city(self, matrix):
-        """Show weather city setting."""
-        width = matrix.width
-        height = matrix.height
-        
-        # Title
-        matrix.text("WEATHER CITY", 2, 2, (255, 200, 0))
-        
-        y = 16
-        
-        matrix.text("Current:", 4, y, (150, 150, 150))
-        y += 12
-        
-        # Current city (word wrapped if needed)
-        city = self.settings["weather_city"]
-        if len(city) > 20:
-            # Split long city names
-            words = city.split()
-            line = ""
-            for word in words:
-                if len(line + word) > 20:
-                    matrix.text(line, 4, y, (255, 255, 255))
-                    y += 10
-                    line = word + " "
-                else:
-                    line += word + " "
-            if line:
-                matrix.text(line.strip(), 4, y, (255, 255, 255))
-        else:
-            matrix.text(city, 4, y, (255, 255, 255))
-        
-        y += 20
-        
-        # Note about text input
-        matrix.text("Text input not yet", 4, y, (200, 150, 100))
-        y += 10
-        matrix.text("implemented.", 4, y, (200, 150, 100))
-        y += 12
-        
-        matrix.text("Coming soon:", 4, y, (150, 150, 150))
-        y += 10
-        matrix.text("On-screen keyboard", 4, y, (100, 200, 100))
-        
-        # Back hint
-        matrix.text("ESC:BACK", 2, height - 8, (100, 100, 100))
 
     def render_demo_mode(self, matrix):
         """Show demo mode toggle."""
