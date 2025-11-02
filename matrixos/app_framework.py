@@ -326,11 +326,17 @@ class OSContext:
             
             # Handle keyboard requests (apps needing text input)
             if self.active_app and getattr(self.active_app, 'needs_keyboard', False):
+                # Clear needs_keyboard flag immediately
+                self.active_app.needs_keyboard = False
+                
                 if hasattr(self.active_app, 'handle_city_input'):
-                    # Weather app special handling
+                    # Weather app special handling (blocking keyboard)
                     self.active_app.handle_city_input(self.matrix, self.input)
-                # Mark as no longer dirty since keyboard just rendered
-                self.active_app.dirty = True
+                    self.active_app.dirty = True
+                elif hasattr(self.active_app, 'handle_keyboard_input'):
+                    # Generic keyboard handling (blocking)
+                    self.active_app.handle_keyboard_input(self.matrix, self.input)
+                    self.active_app.dirty = True
 
             # Update active app
             if self.active_app:
