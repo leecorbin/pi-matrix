@@ -319,17 +319,41 @@ def show_keyboard(matrix, input_handler, prompt: str = "Enter text:",
                 pass
         
         # Clear screen
-        matrix.clear()
+        try:
+            matrix.clear()
+        except Exception as e:
+            with open('/tmp/matrixos_debug.log', 'a') as f:
+                f.write(f"[KEYBOARD ERROR] matrix.clear() failed: {e}\n")
+                f.flush()
+            break
         
         # Render keyboard
-        keyboard.render(matrix)
+        try:
+            keyboard.render(matrix)
+        except Exception as e:
+            with open('/tmp/matrixos_debug.log', 'a') as f:
+                f.write(f"[KEYBOARD ERROR] keyboard.render() failed: {e}\n")
+                f.flush()
+            break
         
         # Display
-        matrix.display()
+        try:
+            matrix.show()
+        except Exception as e:
+            with open('/tmp/matrixos_debug.log', 'a') as f:
+                f.write(f"[KEYBOARD ERROR] matrix.show() failed: {e}\n")
+                f.flush()
+            break
         
         # Handle input
         event = input_handler.get_key(timeout=0.1)
         if event:
+            try:
+                with open('/tmp/matrixos_debug.log', 'a') as f:
+                    f.write(f"[KEYBOARD] Got event: {event.key}\n")
+                    f.flush()
+            except:
+                pass
             keyboard.handle_input(event)
     
     # DEBUG
