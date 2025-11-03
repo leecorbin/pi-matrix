@@ -1,0 +1,7 @@
+{
+    "name": "Invaders",
+    "version": "1.0.0",
+    "author": "MatrixOS Team",
+    "description": "Classic arcade shooter - defend Earth from alien invaders!",
+    "entry_point": "main.py"
+}

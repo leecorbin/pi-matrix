@@ -11,6 +11,10 @@ from pathlib import Path
 from matrixos import layout  # Import layout helpers
 from matrixos.input import InputEvent  # For key constants
 from matrixos.emoji_loader import get_emoji_loader  # For emoji icons
+from matrixos.logger import get_logger  # For logging
+
+# Create logger for launcher
+logger = get_logger("Launcher")
 
 
 # Legacy 8-color palette (for backward compatibility)
@@ -30,6 +34,7 @@ class App:
     """Represents a MatrixOS app."""
 
     def __init__(self, folder_path):
+        logger.debug(f"App.__init__ started for {folder_path}")
         self.folder_path = Path(folder_path)
         self.name = "Unknown"
         self.author = "Unknown"
@@ -40,8 +45,11 @@ class App:
         self.icon_format = "palette"  # "palette", "rgb", or "hex"
         self.icon_native_size = 16  # Native size of the icon (16 or 32)
 
+        logger.debug(f"Loading config for {folder_path.name}")
         self._load_config()
+        logger.debug(f"Loading icon for {folder_path.name}")
         self._load_icon()
+        logger.debug(f"App.__init__ completed for {folder_path.name}")
 
     def _load_config(self):
         """Load app config from config.json."""
@@ -64,29 +72,52 @@ class App:
         """Load app icon from icon.json (or icon32.json for 32×32).
         
         Supports multiple formats:
-        - Emoji: Set emoji_icon in config.json (will try sprite sheet, then download if enabled)
+        - Emoji: Set emoji_icon in config.json OR {"emoji": "🎮"} in icon.json
         - RGB format: {"format": "rgb", "pixels": [[[r,g,b], ...], ...]}
         - Hex format: {"format": "hex", "pixels": [["#RRGGBB", ...], ...]}
         - Palette format (legacy): {"pixels": [[0-7, ...], ...]}
         """
+        logger.debug(f"_load_icon started for {self.folder_path.name}")
+        
+        # Check if icon.json specifies an emoji
+        if not self.emoji_icon:
+            icon_path = self.folder_path / "icon.json"
+            if icon_path.exists():
+                try:
+                    with open(icon_path, 'r') as f:
+                        icon_data = json.load(f)
+                        if "emoji" in icon_data:
+                            self.emoji_icon = icon_data["emoji"]
+                            logger.debug(f"Found emoji in icon.json: {self.emoji_icon}")
+                except Exception as e:
+                    logger.error(f"Error reading icon.json: {e}")
+        
         # Check if we should load emoji icon first
         if self.emoji_icon:
+            logger.debug(f"Loading emoji icon: {self.emoji_icon}")
             try:
                 emoji_loader = get_emoji_loader()
                 
                 # Try to get emoji (sprite sheet first, then download if enabled)
+                logger.debug(f"Calling get_emoji_with_fallback for {self.emoji_icon}")
                 img = emoji_loader.get_emoji_with_fallback(self.emoji_icon, size=32, allow_download=True)
+                logger.debug(f"get_emoji_with_fallback returned: {img is not None}")
                 
                 if img:
                     # Convert to icon JSON format
+                    logger.debug(f"Converting emoji to icon JSON")
                     icon_data = emoji_loader.emoji_to_icon_json(self.emoji_icon, size=32)
                     if icon_data:
                         # Convert to RGB format expected by launcher
+                        logger.debug(f"Loading emoji icon data")
                         self._load_emoji_icon_data(icon_data)
+                        logger.debug(f"Emoji icon loaded successfully")
                         return
                 else:
+                    logger.warning(f"Emoji '{self.emoji_icon}' not available")
                     print(f"Warning: Emoji '{self.emoji_icon}' not available (sprite sheet: no, download: disabled/failed)")
             except Exception as e:
+                logger.error(f"Error loading emoji icon '{self.emoji_icon}': {e}")
                 print(f"Error loading emoji icon '{self.emoji_icon}': {e}")
                 import traceback
                 traceback.print_exc()
@@ -263,8 +294,10 @@ class App:
         Returns:
             True if app was launched successfully
         """
+        logger.info(f"Launch requested for: {self.name}")
         main_py = self.folder_path / "main.py"
         if not main_py.exists():
+            logger.error(f"main.py not found for {self.name}")
             return False
 
         print(f"\n{'='*64}")
@@ -273,17 +306,24 @@ class App:
 
         try:
             # Import app module
+            logger.debug(f"Creating module spec for {self.name}")
             spec = importlib.util.spec_from_file_location(
                 f"app_{self.folder_path.name}",
                 main_py
             )
+            logger.debug(f"Creating module from spec for {self.name}")
             module = importlib.util.module_from_spec(spec)
+            logger.debug(f"Executing module for {self.name}")
             spec.loader.exec_module(module)
+            logger.debug(f"Module executed successfully for {self.name}")
 
             # Call the app's run() function
             if hasattr(module, 'run'):
+                logger.info(f"Calling run() for {self.name}")
                 module.run(os_context)
+                logger.info(f"run() completed for {self.name}")
             else:
+                logger.error(f"App '{self.name}' missing run(os_context) function!")
                 print(f"Error: App '{self.name}' missing run(os_context) function!")
                 return False
 
@@ -322,6 +362,22 @@ class Launcher:
 
         self._discover_apps()
 
+    def get_help_text(self):
+        """Return launcher-specific help."""
+        total_pages = (len(self.apps) + self.apps_per_page - 1) // self.apps_per_page
+        help_items = [
+            ("↑↓←→", "Navigate apps"),
+            ("ENTER", "Launch app"),
+        ]
+        
+        if total_pages > 1:
+            help_items.extend([
+                ("L1/R1", "Prev/next page"),
+                ("", f"Page {self.current_page + 1}/{total_pages}"),
+            ])
+        
+        return help_items
+
     def _discover_apps(self):
         """Discover all valid apps from multiple directories.
         
@@ -330,26 +386,51 @@ class Launcher:
         2. apps/ - User apps
         3. matrixos/apps/ - System apps (Settings) - listed last
         """
+        logger.info("Starting app discovery")
+        
         # Example apps first (examples/)
         examples_dir = self.apps_base_dir / "examples"
         if examples_dir.exists():
+            logger.debug(f"Scanning examples directory: {examples_dir}")
             for folder in sorted(examples_dir.iterdir()):
                 if folder.is_dir() and self._is_valid_app(folder):
-                    self.apps.append(App(folder))
+                    logger.debug(f"Loading app from: {folder.name}")
+                    try:
+                        app = App(folder)
+                        self.apps.append(app)
+                        logger.info(f"Loaded: {app.name} ({folder.name})")
+                    except Exception as e:
+                        logger.error(f"Failed to load {folder.name}: {e}")
         
         # User apps second (apps/)
         user_apps_dir = self.apps_base_dir / "apps"
         if user_apps_dir.exists():
+            logger.debug(f"Scanning user apps directory: {user_apps_dir}")
             for folder in sorted(user_apps_dir.iterdir()):
                 if folder.is_dir() and self._is_valid_app(folder):
-                    self.apps.append(App(folder))
+                    logger.debug(f"Loading app from: {folder.name}")
+                    try:
+                        app = App(folder)
+                        self.apps.append(app)
+                        logger.info(f"Loaded: {app.name} ({folder.name})")
+                    except Exception as e:
+                        logger.error(f"Failed to load {folder.name}: {e}")
         
         # System apps last (matrixos/apps/) - Settings at the end
         system_apps_dir = self.apps_base_dir / "matrixos" / "apps"
         if system_apps_dir.exists():
+            logger.debug(f"Scanning system apps directory: {system_apps_dir}")
             for folder in sorted(system_apps_dir.iterdir()):
                 if folder.is_dir() and self._is_valid_app(folder):
-                    self.apps.append(App(folder))
+                    logger.debug(f"Loading app from: {folder.name}")
+                    try:
+                        app = App(folder)
+                        self.apps.append(app)
+                        logger.info(f"Loaded: {app.name} ({folder.name})")
+                    except Exception as e:
+                        logger.error(f"Failed to load {folder.name}: {e}")
+        
+        logger.info(f"Discovery complete: Found {len(self.apps)} apps")
 
     def _is_valid_app(self, folder_path):
         """Check if a folder is a valid app."""
@@ -430,11 +511,34 @@ class Launcher:
                     if page_row > 0:
                         self.selected_index -= self.grid_width
                         needs_redraw = True
+                    elif self.current_page > 0:
+                        # At top of page, go to previous page
+                        self.current_page -= 1
+                        # Select bottom row of previous page, same column
+                        prev_page_start = self.current_page * self.apps_per_page
+                        prev_page_end = min(prev_page_start + self.apps_per_page, len(self.apps))
+                        prev_page_size = prev_page_end - prev_page_start
+                        # Find last row on previous page
+                        last_row = (prev_page_size - 1) // self.grid_width
+                        self.selected_index = prev_page_start + (last_row * self.grid_width) + page_col
+                        # Make sure we don't go past the end
+                        self.selected_index = min(self.selected_index, prev_page_end - 1)
+                        needs_redraw = True
 
                 elif event.key == 'DOWN':
                     new_index = self.selected_index + self.grid_width
                     if new_index < page_end:
                         self.selected_index = new_index
+                        needs_redraw = True
+                    elif self.current_page < total_pages - 1:
+                        # At bottom of page, go to next page
+                        self.current_page += 1
+                        # Select top row of next page, same column
+                        next_page_start = self.current_page * self.apps_per_page
+                        self.selected_index = next_page_start + page_col
+                        # Make sure we don't go past the end
+                        next_page_end = min(next_page_start + self.apps_per_page, len(self.apps))
+                        self.selected_index = min(self.selected_index, next_page_end - 1)
                         needs_redraw = True
 
                 elif event.key == 'LEFT':

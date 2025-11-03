@@ -294,7 +294,7 @@ class OSContext:
             # Handle system-level input events
             event = self.input.get_key(timeout=0.001)
             if event:
-                if event.key == 'HELP':  # TAB = toggle help
+                if event.key == InputEvent.HELP:  # TAB = toggle help
                     self.showing_help = not self.showing_help
                     if not self.showing_help:
                         self.help_scroll = 0

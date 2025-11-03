@@ -1,0 +1,7 @@
+{
+    "name": "Clock",
+    "version": "1.0.0",
+    "author": "MatrixOS Team",
+    "description": "Analog and digital clock with date display",
+    "entry_point": "main.py"
+}

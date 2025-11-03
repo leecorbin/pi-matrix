@@ -24,6 +24,8 @@ class InputEvent:
     BACK = 'BACK'      # Backspace - go back one step
     HOME = 'HOME'      # ESC - return to launcher
     HELP = 'HELP'      # TAB key
+    L1 = 'L1'          # Left shoulder button (Page Up on keyboard)
+    R1 = 'R1'          # Right shoulder button (Page Down on keyboard)
 
     def __init__(self, key: str, raw: str = None):
         """
@@ -150,6 +152,12 @@ class KeyboardInput:
             return InputEvent(InputEvent.RIGHT, char)
         elif char == '\x1b[D':
             return InputEvent(InputEvent.LEFT, char)
+        
+        # Page Up/Down (L1/R1 shoulder buttons)
+        elif char == '\x1b[5~':
+            return InputEvent(InputEvent.L1, char)
+        elif char == '\x1b[6~':
+            return InputEvent(InputEvent.R1, char)
         
         # ESC = HOME button (return to launcher) - only if bare ESC
         elif char == '\x1b':

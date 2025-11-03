@@ -1,0 +1,7 @@
+{
+    "name": "Platformer",
+    "version": "1.0.0",
+    "author": "MatrixOS Team",
+    "description": "Side-scrolling platform adventure with jumping and obstacles",
+    "entry_point": "main.py"
+}
