@@ -1,0 +1,17 @@
+{
+  "version": "1.0",
+  "system": {
+    "emoji_download_enabled": true,
+    "emoji_cache_dir": "~/.matrixos/emoji_cache"
+  },
+  "display": {
+    "default_width": 128,
+    "default_height": 128,
+    "default_brightness": 80
+  },
+  "apps": {
+    "auto_install_dependencies": false,
+    "allow_background_apps": true
+  },
+  "_comment": "MatrixOS System Configuration - Set by installer/admin, not modified by user settings"
+}

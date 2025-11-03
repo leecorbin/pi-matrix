@@ -10,6 +10,7 @@ import importlib.util
 from pathlib import Path
 from matrixos import layout  # Import layout helpers
 from matrixos.input import InputEvent  # For key constants
+from matrixos.emoji_loader import get_emoji_loader  # For emoji icons
 
 
 # Legacy 8-color palette (for backward compatibility)
@@ -34,6 +35,7 @@ class App:
         self.author = "Unknown"
         self.version = "1.0.0"
         self.description = ""
+        self.emoji_icon = None  # Emoji character if using emoji icon
         self.icon_pixels = None
         self.icon_format = "palette"  # "palette", "rgb", or "hex"
         self.icon_native_size = 16  # Native size of the icon (16 or 32)
@@ -51,15 +53,44 @@ class App:
                 self.author = config.get("author", "Unknown")
                 self.version = config.get("version", "1.0.0")
                 self.description = config.get("description", "")
+                
+                # Check if icon field specifies an emoji
+                icon_field = config.get("icon", "")
+                if icon_field and len(icon_field) <= 4 and not icon_field.endswith('.json'):
+                    # Looks like an emoji character (1-4 chars, not a filename)
+                    self.emoji_icon = icon_field
 
     def _load_icon(self):
         """Load app icon from icon.json (or icon32.json for 32×32).
         
         Supports multiple formats:
+        - Emoji: Set emoji_icon in config.json (will try sprite sheet, then download if enabled)
         - RGB format: {"format": "rgb", "pixels": [[[r,g,b], ...], ...]}
         - Hex format: {"format": "hex", "pixels": [["#RRGGBB", ...], ...]}
         - Palette format (legacy): {"pixels": [[0-7, ...], ...]}
         """
+        # Check if we should load emoji icon first
+        if self.emoji_icon:
+            try:
+                emoji_loader = get_emoji_loader()
+                
+                # Try to get emoji (sprite sheet first, then download if enabled)
+                img = emoji_loader.get_emoji_with_fallback(self.emoji_icon, size=32, allow_download=True)
+                
+                if img:
+                    # Convert to icon JSON format
+                    icon_data = emoji_loader.emoji_to_icon_json(self.emoji_icon, size=32)
+                    if icon_data:
+                        # Convert to RGB format expected by launcher
+                        self._load_emoji_icon_data(icon_data)
+                        return
+                else:
+                    print(f"Warning: Emoji '{self.emoji_icon}' not available (sprite sheet: no, download: disabled/failed)")
+            except Exception as e:
+                print(f"Error loading emoji icon '{self.emoji_icon}': {e}")
+                import traceback
+                traceback.print_exc()
+        
         # Try to load 32×32 icon first (for high-res displays)
         icon32_path = self.folder_path / "icon32.json"
         if icon32_path.exists():
@@ -82,6 +113,34 @@ class App:
         self.icon_pixels = None
         self.icon_format = "palette"
         self.icon_native_size = 16
+    
+    def _load_emoji_icon_data(self, icon_data):
+        """Convert emoji icon data from sprite sheet to RGB pixel format.
+        
+        Args:
+            icon_data: Dict with 'width', 'height', 'data' (list of {x, y, c} sparse pixels)
+        """
+        size = icon_data['width']
+        
+        # Create empty RGBA array
+        pixels = [[None for _ in range(size)] for _ in range(size)]
+        
+        # Fill in pixels from sparse data
+        for pixel in icon_data['data']:
+            x = pixel['x']
+            y = pixel['y']
+            rgb565 = pixel['c']
+            
+            # Convert RGB565 back to RGB888
+            r = ((rgb565 >> 11) & 0x1F) << 3
+            g = ((rgb565 >> 5) & 0x3F) << 2
+            b = (rgb565 & 0x1F) << 3
+            
+            pixels[y][x] = [r, g, b]
+        
+        self.icon_pixels = pixels
+        self.icon_format = "rgb"
+        self.icon_native_size = size
     
     def _parse_icon_file(self, path):
         """Parse icon file and return (pixels, format) tuple.

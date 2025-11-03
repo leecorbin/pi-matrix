@@ -3,5 +3,6 @@
   "version": "1.0.0",
   "description": "Configure MatrixOS settings",
   "author": "MatrixOS Team",
-  "main": "main.py"
+  "main": "main.py",
+  "icon": "⚙️"
 }

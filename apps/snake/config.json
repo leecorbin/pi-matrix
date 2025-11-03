@@ -4,5 +4,5 @@
   "description": "Classic snake game - eat, grow, avoid yourself!",
   "author": "MatrixOS Team",
   "main": "main.py",
-  "icon": "icon.json"
+  "icon": "🐍"
 }

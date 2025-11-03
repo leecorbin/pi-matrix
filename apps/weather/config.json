@@ -2,5 +2,6 @@
   "name": "Weather",
   "author": "MatrixOS",
   "version": "1.0.0",
-  "description": "Weather display with background updates"
+  "description": "Weather display with background updates",
+  "icon": "🌦️"
 }

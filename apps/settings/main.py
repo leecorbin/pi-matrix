@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from matrixos.app_framework import App
 from matrixos.input import InputEvent
 from matrixos import layout
+from matrixos.system_config_loader import is_emoji_download_enabled, set_emoji_download_enabled
 
 
 class SettingsApp(App):
@@ -31,6 +32,7 @@ class SettingsApp(App):
         self.menu_items = [
             "Display Info",
             "Resolution",
+            "Emoji Downloads",
             "Demo Mode",
             "About MatrixOS",
         ]
@@ -65,6 +67,8 @@ class SettingsApp(App):
                 return True
         elif self.current_view == "resolution":
             return self.handle_resolution_input(event)
+        elif self.current_view == "emoji_downloads":
+            return self.handle_emoji_downloads_input(event)
         elif self.current_view == "demo_mode":
             return self.handle_demo_mode_input(event)
         elif self.current_view == "about":
@@ -89,6 +93,8 @@ class SettingsApp(App):
                 self.current_view = "display_info"
             elif selected == "Resolution":
                 self.current_view = "resolution"
+            elif selected == "Emoji Downloads":
+                self.current_view = "emoji_downloads"
             elif selected == "Demo Mode":
                 self.current_view = "demo_mode"
             elif selected == "About MatrixOS":
@@ -113,9 +119,22 @@ class SettingsApp(App):
         
         return False
 
+    def handle_emoji_downloads_input(self, event):
+        """Handle emoji downloads toggle."""
+        if event.key == InputEvent.OK or event.key == InputEvent.SPACE:
+            # Toggle setting
+            current = is_emoji_download_enabled()
+            set_emoji_download_enabled(not current)
+            return True
+        elif event.key == InputEvent.BACK:
+            self.current_view = "menu"
+            return True
+        
+        return False
+
     def handle_demo_mode_input(self, event):
         """Handle demo mode toggle."""
-        if event.key == InputEvent.OK or event.key == ' ':
+        if event.key == InputEvent.OK or event.key == InputEvent.SPACE:
             self.settings["demo_mode"] = not self.settings["demo_mode"]
             return True
         elif event.key == InputEvent.BACK:
@@ -132,6 +151,8 @@ class SettingsApp(App):
             self.render_display_info(matrix)
         elif self.current_view == "resolution":
             self.render_resolution(matrix)
+        elif self.current_view == "emoji_downloads":
+            self.render_emoji_downloads(matrix)
         elif self.current_view == "demo_mode":
             self.render_demo_mode(matrix)
         elif self.current_view == "about":
@@ -202,6 +223,36 @@ class SettingsApp(App):
         
         # Hint
         matrix.text("^v:SELECT ESC:BACK", 2, height - 8, (100, 100, 100))
+
+    def render_emoji_downloads(self, matrix):
+        """Show emoji download toggle."""
+        width = matrix.width
+        height = matrix.height
+        
+        # Title
+        matrix.text("EMOJI DOWNLOADS", 2, 2, (255, 200, 0))
+        
+        y = 20
+        
+        matrix.text("Download missing", 4, y, (150, 150, 150))
+        y += 10
+        matrix.text("emoji icons from", 4, y, (150, 150, 150))
+        y += 10
+        matrix.text("GitHub on-demand", 4, y, (150, 150, 150))
+        
+        y += 16
+        
+        # Show current state
+        enabled = is_emoji_download_enabled()
+        status_text = "ENABLED" if enabled else "DISABLED"
+        status_color = (0, 255, 0) if enabled else (255, 100, 0)
+        checkbox = "[X]" if enabled else "[ ]"
+        
+        matrix.text(checkbox, 8, y, status_color)
+        matrix.text(status_text, 28, y, status_color)
+        
+        # Hint
+        matrix.text("ENTER:TOGGLE ESC:BACK", 2, height - 8, (100, 100, 100))
 
     def render_demo_mode(self, matrix):
         """Show demo mode toggle."""
