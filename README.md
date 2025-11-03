@@ -22,17 +22,51 @@ class MyApp(App):
 
 ## 🎯 Quick Start
 
-**Run MatrixOS with the terminal emulator:**
+### Installation
+
+**1. Clone the repository:**
 ```bash
 git clone https://github.com/leecorbin/matrixos.git
 cd matrixos
+```
+
+**2. Install dependencies:**
+
+MatrixOS requires [Pillow](https://pillow.readthedocs.io/) (Python Imaging Library) for emoji and icon support.
+
+**Option A: System-wide install (easiest)**
+```bash
+pip3 install -r requirements.txt
+# Or just: pip3 install Pillow
+```
+
+**Option B: Virtual environment (recommended for development)**
+```bash
+# On Linux/Mac:
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# On Windows:
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+**Note for macOS users:** If you don't have `venv`, it's included in Python 3.3+. Make sure you have Python installed:
+```bash
+python3 --version  # Should be 3.7 or higher
+```
+
+**3. Run MatrixOS:**
+```bash
 python3 start.py
 
 # Or specify resolution (default is 128×128):
 python3 start.py --width 128 --height 128
 ```
 
-Navigate with arrow keys, press Enter to launch apps, ESC to go back.
+Navigate with arrow keys, press **Enter** to launch apps, **Space** to jump/fire in games, **ESC** to go back.
 
 ## ✨ Key Features
 

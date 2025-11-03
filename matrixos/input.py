@@ -21,6 +21,7 @@ class InputEvent:
     LEFT = 'LEFT'
     RIGHT = 'RIGHT'
     OK = 'OK'          # Enter key
+    ACTION = 'ACTION'  # Space bar - for jump/fire/action
     BACK = 'BACK'      # Backspace - go back one step
     HOME = 'HOME'      # ESC - return to launcher
     HELP = 'HELP'      # TAB key
@@ -174,6 +175,10 @@ class KeyboardInput:
         # TAB for help
         elif char == '\t':
             return InputEvent(InputEvent.HELP, char)
+
+        # Space bar for action (jump/fire)
+        elif char == ' ':
+            return InputEvent(InputEvent.ACTION, char)
 
         # Any other character (including numbers, letters)
         else:

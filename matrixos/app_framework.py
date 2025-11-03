@@ -166,13 +166,15 @@ class OSContext:
         Args:
             app: App instance to activate
         """
-        if self.active_app == app:
+        # Only skip if it's the same app AND it's still active
+        if self.active_app == app and app.active:
+            debug_log(f"[SWITCH] Already on {app.name} - skipping")
             return
 
         debug_log(f"[SWITCH] From {self.active_app.name if self.active_app else 'None'} to {app.name}")
 
         # Deactivate current app
-        if self.active_app:
+        if self.active_app and self.active_app != app:
             self.active_app.active = False
             self.active_app.on_deactivate()
 

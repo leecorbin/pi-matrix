@@ -19,6 +19,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from matrixos.app_framework import App
 from matrixos.input import InputEvent
+from matrixos.logger import get_logger
+
+logger = get_logger("Invaders")
 
 
 class SpaceInvadersGame(App):
@@ -61,6 +64,7 @@ class SpaceInvadersGame(App):
         
     def on_activate(self):
         """Initialize game."""
+        logger.info("on_activate() called")
         self.player_x = (128 - self.player_width) // 2
         self.bullets = []
         self.alien_bullets = []
@@ -71,6 +75,7 @@ class SpaceInvadersGame(App):
         self.game_over = False
         self.frame_count = 0
         self.dirty = True
+        logger.info("on_activate() completed")
     
     def init_aliens(self):
         """Initialize alien formation."""
@@ -109,8 +114,8 @@ class SpaceInvadersGame(App):
         elif event.key == InputEvent.RIGHT:
             self.player_x = min(128 - self.player_width, self.player_x + self.player_speed)
             self.dirty = True
-        elif event.key == InputEvent.OK or event.key == 'A':
-            # Fire bullet
+        elif event.key in [InputEvent.OK, InputEvent.ACTION, 'A', ' ']:
+            # Fire bullet (Enter, Space, or A)
             if len(self.bullets) < 3:  # Limit bullets
                 self.bullets.append({
                     'x': self.player_x + self.player_width // 2 - 1,
@@ -242,8 +247,8 @@ class SpaceInvadersGame(App):
                 matrix.rect(alien['x'], alien['y'], 
                            self.alien_width, self.alien_height, color, fill=True)
                 # Eyes
-                matrix.pixel(alien['x'] + 2, alien['y'] + 2, (255, 255, 0))
-                matrix.pixel(alien['x'] + 7, alien['y'] + 2, (255, 255, 0))
+                matrix.set_pixel(alien['x'] + 2, alien['y'] + 2, (255, 255, 0))
+                matrix.set_pixel(alien['x'] + 7, alien['y'] + 2, (255, 255, 0))
         
         # Draw player bullets
         for bullet in self.bullets:
@@ -265,7 +270,12 @@ class SpaceInvadersGame(App):
 
 def run(os_context):
     """Run Space Invaders game within MatrixOS framework."""
+    logger.info("run() function called")
     game = SpaceInvadersGame()
+    logger.info("Game instance created")
     os_context.register_app(game)
+    logger.info("App registered")
     os_context.switch_to_app(game)
+    logger.info("Switched to app - entering event loop")
     os_context.run()
+    logger.info("Event loop exited")

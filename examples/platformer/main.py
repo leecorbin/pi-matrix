@@ -18,6 +18,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from matrixos.app_framework import App
 from matrixos.input import InputEvent
+from matrixos.logger import get_logger
+
+logger = get_logger("Platformer")
 
 
 class PlatformerGame(App):
@@ -117,8 +120,8 @@ class PlatformerGame(App):
         elif event.key == InputEvent.RIGHT:
             self.player_x = min(550, self.player_x + self.move_speed)
             self.dirty = True
-        elif event.key == InputEvent.OK or event.key == 'A':
-            # Jump
+        elif event.key in [InputEvent.OK, InputEvent.ACTION, 'A', ' ']:
+            # Jump (Enter, Space, or A)
             if self.on_ground:
                 self.player_vy = self.jump_strength
                 self.on_ground = False
@@ -215,8 +218,8 @@ class PlatformerGame(App):
             self.dirty = False
             return
         
-        # Draw background (sky)
-        matrix.fill((135, 206, 235))
+        # Draw background (darker sky for better visibility)
+        matrix.fill((50, 100, 150))
         
         # Draw platforms
         for platform in self.platforms:
@@ -243,8 +246,8 @@ class PlatformerGame(App):
                            enemy['width'], enemy['height'], 
                            (255, 0, 0), fill=True)
                 # Evil eyes
-                matrix.pixel(screen_x + 2, enemy['y'] + 2, (255, 255, 0))
-                matrix.pixel(screen_x + 5, enemy['y'] + 2, (255, 255, 0))
+                matrix.set_pixel(screen_x + 2, enemy['y'] + 2, (255, 255, 0))
+                matrix.set_pixel(screen_x + 5, enemy['y'] + 2, (255, 255, 0))
         
         # Draw player
         player_screen_x = self.player_x - self.camera_x
@@ -252,10 +255,10 @@ class PlatformerGame(App):
                    self.player_width, self.player_height, 
                    (0, 150, 255), fill=True)
         # Face
-        matrix.pixel(player_screen_x + 2, self.player_y + 2, (255, 255, 255))
-        matrix.pixel(player_screen_x + 5, self.player_y + 2, (255, 255, 255))
-        matrix.pixel(player_screen_x + 3, self.player_y + 6, (255, 255, 255))
-        matrix.pixel(player_screen_x + 4, self.player_y + 6, (255, 255, 255))
+        matrix.set_pixel(player_screen_x + 2, self.player_y + 2, (255, 255, 255))
+        matrix.set_pixel(player_screen_x + 5, self.player_y + 2, (255, 255, 255))
+        matrix.set_pixel(player_screen_x + 3, self.player_y + 6, (255, 255, 255))
+        matrix.set_pixel(player_screen_x + 4, self.player_y + 6, (255, 255, 255))
         
         # Draw HUD
         matrix.text(f"Score: {self.score}", 2, 2, (255, 255, 255))

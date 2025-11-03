@@ -1,3 +1,8 @@
-# LED Matrix Display Emulator
-# No external dependencies currently - uses Python standard library only
-# This keeps the project Pi Zero compatible and lightweight
+# MatrixOS Dependencies
+
+# Image processing for emoji icons and app icons
+# Install with: pip install Pillow
+Pillow>=10.0.0
+
+# Optional: For faster emoji rendering (if you modify emoji system)
+# requests>=2.31.0
