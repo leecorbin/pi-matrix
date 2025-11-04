@@ -1,0 +1,5 @@
+{
+  "name": "Pac-Man V2",
+  "entry_point": "main.py",
+  "description": "Classic Pac-Man refactored with sprite framework - fixes wall overlaps and movement bugs"
+}
