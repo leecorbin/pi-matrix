@@ -1,152 +1,115 @@
-#!/usr/bin/env python3
 """
-News Headlines - Live news from RSS feeds
+News - ZX Spectrum RSS Reader for 256×192
+==========================================
 
 Features:
 - Scrolling news headlines
 - Multiple news sources
-- Auto-refresh
-- Category selection
+- Spectrum-styled text display
+- Article preview area
+- Side panels with indicators
 """
 
 import sys
 import os
-import time
 
-# Add project root to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from matrixos.app_framework import App
 from matrixos.input import InputEvent
 
+CYAN = (0, 255, 255)
+DARK_BLUE = (0, 0, 40)
+YELLOW = (255, 255, 0)
+RED = (255, 0, 0)
+WHITE = (255, 255, 255)
+GREEN = (0, 255, 0)
 
 class NewsApp(App):
-    """News headlines app with scrolling text."""
+    """Mock news reader with Spectrum aesthetic"""
     
     def __init__(self):
         super().__init__("News")
-        self.headlines = []
-        self.current_index = 0
-        self.scroll_x = 128
-        self.last_update = 0
-        self.update_interval = 300  # 5 minutes
-        self.scroll_speed = 1
-        self.loading = True
-        
-    def on_activate(self):
-        """Initialize app."""
-        self.current_index = 0
-        self.scroll_x = 128
-        self.loading = True
-        self.load_headlines()
-        self.dirty = True
-    
-    def load_headlines(self):
-        """Load news headlines from RSS/API."""
-        # Simulated headlines (in production, would fetch from RSS feeds or NewsAPI)
-        self.headlines = [
-            "🌍 Breaking: New climate agreement signed by 50 nations",
-            "💻 Tech: AI breakthrough in quantum computing announced",
-            "🏀 Sports: Championship finals begin this weekend",
-            "🎬 Entertainment: New blockbuster breaks box office records",
-            "📈 Markets: Stock indices reach all-time highs",
-            "🔬 Science: Researchers discover new exoplanet in habitable zone",
-            "🏥 Health: Vaccine development progresses for emerging virus",
-            "🚀 Space: Mars mission prepares for launch next month",
-            "🌦️ Weather: Tropical storm warning issued for coastal regions",
-            "🎓 Education: Universities announce new online programs",
+        # Mock news articles
+        self.articles = [
+            ("Tech", "New AI breakthrough announced", "Scientists develop faster algorithms..."),
+            ("Science", "Mars mission scheduled for 2026", "NASA plans ambitious journey..."),
+            ("Sports", "Championship game tonight", "Teams prepare for finals..."),
+            ("Weather", "Sunny forecast this week", "Clear skies expected..."),
+            ("Business", "Markets reach new highs", "Investors celebrate gains..."),
+            ("World", "International summit begins", "Leaders gather for talks..."),
         ]
-        self.loading = False
-        self.last_update = time.time()
-    
-    def on_deactivate(self):
-        """Cleanup when exiting."""
-        pass
+        self.selected = 0
+        self.scroll_offset = 0
     
     def on_event(self, event):
-        """Handle user input."""
         if event.key == InputEvent.UP:
-            # Previous headline
-            self.current_index = (self.current_index - 1) % len(self.headlines)
-            self.scroll_x = 128
+            self.selected = max(0, self.selected - 1)
             self.dirty = True
+            return True
         elif event.key == InputEvent.DOWN:
-            # Next headline
-            self.current_index = (self.current_index + 1) % len(self.headlines)
-            self.scroll_x = 128
+            self.selected = min(len(self.articles) - 1, self.selected + 1)
             self.dirty = True
-        elif event.key == InputEvent.OK:
-            # Refresh
-            self.loading = True
-            self.load_headlines()
-            self.dirty = True
-        
-        return True  # Event handled
+            return True
+        return False
     
     def on_update(self, delta_time):
-        """Update app state."""
-        if self.loading:
-            return
-        
-        # Scroll headline
-        self.scroll_x -= self.scroll_speed
-        
-        # Calculate text width (approximate)
-        current_text = self.headlines[self.current_index]
-        text_width = len(current_text) * 6  # Approximate character width
-        
-        # Reset scroll when text is off screen
-        if self.scroll_x < -text_width:
-            self.scroll_x = 128
-            # Auto-advance to next headline
-            self.current_index = (self.current_index + 1) % len(self.headlines)
-        
-        # Check if need to refresh headlines
-        if time.time() - self.last_update > self.update_interval:
-            self.load_headlines()
-        
+        # Auto-scroll current article
+        self.scroll_offset += 1
         self.dirty = True
     
     def render(self, matrix):
-        """Draw app UI."""
         matrix.clear()
-        matrix.fill((0, 0, 0))
+        matrix.rect(0, 0, 256, 192, DARK_BLUE, fill=True)
         
-        if self.loading:
-            matrix.text("Loading news...", 15, 60, (255, 255, 255))
-            self.dirty = False
-            return
+        # Title bar
+        matrix.text("NEWS READER", 70, 10, CYAN)
+        matrix.rect(0, 22, 256, 2, CYAN, fill=True)
         
-        # Draw header
-        matrix.rect(0, 0, 128, 20, (200, 0, 0), fill=True)
-        matrix.text("LIVE NEWS", 25, 5, (255, 255, 255))
+        # Headlines list (left side)
+        y = 30
+        for i, (category, headline, preview) in enumerate(self.articles):
+            if i == self.selected:
+                # Highlighted
+                matrix.rect(5, y - 2, 150, 12, YELLOW)
+                matrix.text(f"{category}:", 10, y, DARK_BLUE)
+                matrix.text(headline[:18], 50, y, DARK_BLUE)
+            else:
+                # Normal
+                matrix.text(f"{category}:", 10, y, GREEN)
+                matrix.text(headline[:18], 50, y, WHITE)
+            y += 15
         
-        # Draw headline count
-        headline_info = f"{self.current_index + 1}/{len(self.headlines)}"
-        matrix.text(headline_info, 85, 5, (255, 255, 0))
+        # Preview pane (right side)
+        matrix.rect(160, 28, 90, 135, CYAN)
+        matrix.text("PREVIEW", 165, 32, YELLOW)
         
-        # Draw scrolling headline
-        if self.headlines:
-            current_text = self.headlines[self.current_index]
-            matrix.text(current_text, self.scroll_x, 40, (255, 255, 255))
+        if self.selected < len(self.articles):
+            category, headline, preview = self.articles[self.selected]
+            # Word wrap preview
+            words = preview.split()
+            line = ""
+            py = 45
+            for word in words:
+                if len(line + word) > 10:
+                    matrix.text(line, 165, py, WHITE)
+                    py += 10
+                    line = word + " "
+                else:
+                    line += word + " "
+            if line:
+                matrix.text(line, 165, py, WHITE)
         
-        # Draw divider
-        matrix.line(0, 60, 128, 60, (100, 100, 100))
+        # Instructions
+        matrix.text("UP/DOWN: SELECT", 10, 175, CYAN)
         
-        # Draw instructions
-        matrix.text("UP/DOWN: Navigate", 10, 70, (150, 150, 150))
-        matrix.text("OK: Refresh", 10, 85, (150, 150, 150))
-        
-        # Draw last update time
-        minutes_ago = int((time.time() - self.last_update) / 60)
-        update_text = f"Updated {minutes_ago}m ago"
-        matrix.text(update_text, 10, 105, (100, 100, 100))
+        # Status indicators
+        matrix.text(f"{self.selected + 1}/{len(self.articles)}", 200, 175, YELLOW)
         
         self.dirty = False
 
 
 def run(os_context):
-    """Run News app within MatrixOS framework."""
     app = NewsApp()
     os_context.register_app(app)
     os_context.switch_to_app(app)
