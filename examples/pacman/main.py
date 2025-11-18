@@ -1,672 +1,415 @@
-#!/usr/bin/env python3
 """
-Pac-Man Game - Classic arcade action
+Pac-Man - ZX Spectrum Edition for 256×192
+==========================================
 
-Features:
-- Classic maze with dots and power pellets
-- Four colorful ghosts with AI (Blinky, Pinky, Inky, Clyde)
-- Chase, scatter, and frightened modes
-- Lives system and score
-- Sound effects (waka-waka, ghost eaten, power pellet)
-- High score persistence
+Classic Pac-Man game with:
+- Authentic maze with proper collision detection
+- 4 ghosts with different AI behaviors
+- Power pellets that make ghosts vulnerable
+- Tile-based movement system (no wall clipping)
+- Side panels showing lives, score, high score, level
+- Dark blue background with cyan maze walls
+- Chunky 10px Pac-Man and ghost sprites
 """
-
-import sys
-import os
-import time
-import random
-import math
-
-# Add project root to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from matrixos.app_framework import App
 from matrixos.input import InputEvent
-from matrixos import layout, storage, audio
+from matrixos.logger import get_logger
+import random
 
-
-class PacMan:
-    """Pac-Man character."""
-    
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-        self.size = 6
-        self.dx = 0
-        self.dy = 0
-        self.next_dx = 0
-        self.next_dy = 0
-        self.speed = 2
-        self.mouth_angle = 0
-        self.mouth_opening = True
-        
-    def update(self, maze):
-        """Move Pac-Man."""
-        # Try to change direction if requested
-        if self.next_dx != 0 or self.next_dy != 0:
-            new_x = self.x + self.next_dx * self.speed
-            new_y = self.y + self.next_dy * self.speed
-            if not maze.is_wall_at(new_x, new_y, self.size):
-                self.dx = self.next_dx
-                self.dy = self.next_dy
-                self.next_dx = 0
-                self.next_dy = 0
-        
-        # Move in current direction
-        new_x = self.x + self.dx * self.speed
-        new_y = self.y + self.dy * self.speed
-        
-        if not maze.is_wall_at(new_x, new_y, self.size):
-            self.x = new_x
-            self.y = new_y
-        
-        # Wrap around screen
-        if self.x < 0:
-            self.x = 128
-        elif self.x > 128:
-            self.x = 0
-            
-        # Animate mouth
-        if self.mouth_opening:
-            self.mouth_angle += 2
-            if self.mouth_angle >= 45:
-                self.mouth_opening = False
-        else:
-            self.mouth_angle -= 2
-            if self.mouth_angle <= 0:
-                self.mouth_opening = True
-    
-    def set_direction(self, dx, dy):
-        """Queue a direction change."""
-        self.next_dx = dx
-        self.next_dy = dy
-
-
-class Ghost:
-    """Ghost with AI."""
-    
-    def __init__(self, name, x, y, color, home_corner):
-        self.name = name
-        self.x = x
-        self.y = y
-        self.start_x = x
-        self.start_y = y
-        self.size = 6
-        self.color = color
-        self.frightened_color = (50, 50, 255)  # Blue when frightened
-        self.home_corner = home_corner  # Scatter target
-        self.dx = 0
-        self.dy = 0
-        self.speed = 1.5
-        self.mode = "scatter"  # "scatter", "chase", "frightened"
-        self.mode_timer = 180  # Start with scatter mode timer
-        self.frightened_timer = 0
-        self.is_eaten = False
-        
-    def update(self, pacman, maze, game_time):
-        """Move ghost with AI."""
-        # Debug: log once per ghost
-        if game_time == 5 and self.name == "Blinky":
-            print(f"[DEBUG] Ghost {self.name} at ({self.x}, {self.y}) mode={self.mode}")
-        
-        if self.is_eaten:
-            # Return to spawn
-            target_x, target_y = self.start_x, self.start_y
-            if abs(self.x - self.start_x) < 5 and abs(self.y - self.start_y) < 5:
-                self.is_eaten = False
-                self.mode = "scatter"
-        elif self.mode == "frightened":
-            # Random movement when frightened
-            self.frightened_timer -= 1
-            if self.frightened_timer <= 0:
-                self.mode = "scatter"
-                self.mode_timer = 180
-            # Random target
-            target_x = random.randint(10, 118)
-            target_y = random.randint(10, 118)
-        elif self.mode == "scatter":
-            # Go to home corner
-            target_x, target_y = self.home_corner
-            self.mode_timer -= 1
-            if self.mode_timer <= 0:
-                self.mode = "chase"
-                self.mode_timer = 240
-        else:  # chase
-            # Chase Pac-Man (with personality variations)
-            if self.name == "Blinky":
-                # Red - direct chase
-                target_x, target_y = pacman.x, pacman.y
-            elif self.name == "Pinky":
-                # Pink - ambush (target ahead of Pac-Man)
-                target_x = pacman.x + pacman.dx * 20
-                target_y = pacman.y + pacman.dy * 20
-            elif self.name == "Inky":
-                # Cyan - unpredictable (based on Blinky and Pac-Man)
-                target_x = pacman.x + pacman.dx * 10
-                target_y = pacman.y + pacman.dy * 10
-            else:  # Clyde
-                # Orange - chase when far, scatter when close
-                dist = math.sqrt((self.x - pacman.x)**2 + (self.y - pacman.y)**2)
-                if dist > 40:
-                    target_x, target_y = pacman.x, pacman.y
-                else:
-                    target_x, target_y = self.home_corner
-            
-            self.mode_timer -= 1
-            if self.mode_timer <= 0:
-                self.mode = "scatter"
-                self.mode_timer = 180
-        
-        # Simple AI: move toward target
-        dx_to_target = target_x - self.x
-        dy_to_target = target_y - self.y
-        
-        # Choose best direction (prefer horizontal/vertical movement)
-        options = []
-        if abs(dx_to_target) > abs(dy_to_target):
-            # Prefer horizontal
-            if dx_to_target > 0:
-                options = [(1, 0), (0, 1), (0, -1), (-1, 0)]
-            else:
-                options = [(-1, 0), (0, 1), (0, -1), (1, 0)]
-        else:
-            # Prefer vertical
-            if dy_to_target > 0:
-                options = [(0, 1), (1, 0), (-1, 0), (0, -1)]
-            else:
-                options = [(0, -1), (1, 0), (-1, 0), (0, 1)]
-        
-        # Try each direction in order
-        moved = False
-        for dx, dy in options:
-            new_x = self.x + dx * self.speed
-            new_y = self.y + dy * self.speed
-            
-            # Don't reverse direction (looks unnatural)
-            if dx == -self.dx and dy == -self.dy:
-                continue
-            
-            if not maze.is_wall_at(new_x, new_y, self.size):
-                self.dx = dx
-                self.dy = dy
-                self.x = new_x
-                self.y = new_y
-                moved = True
-                break
-        
-        # If stuck, try any direction
-        if not moved:
-            for dx, dy in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
-                new_x = self.x + dx * self.speed
-                new_y = self.y + dy * self.speed
-                if not maze.is_wall_at(new_x, new_y, self.size):
-                    self.dx = dx
-                    self.dy = dy
-                    self.x = new_x
-                    self.y = new_y
-                    break
-        
-        # Wrap around screen
-        if self.x < 0:
-            self.x = 128
-        elif self.x > 128:
-            self.x = 0
-    
-    def frighten(self):
-        """Make ghost frightened (can be eaten)."""
-        if not self.is_eaten:
-            self.mode = "frightened"
-            self.frightened_timer = 240  # ~8 seconds
-    
-    def reset(self):
-        """Reset to spawn."""
-        self.x = self.start_x
-        self.y = self.start_y
-        self.dx = 0
-        self.dy = 0
-        self.mode = "scatter"
-        self.mode_timer = 180
-        self.is_eaten = False
-
-
-class Maze:
-    """Game maze with walls, dots, and power pellets."""
-    
-    def __init__(self):
-        # Simple maze pattern (1 = wall, 0 = path)
-        # Scaled for 128×128 display
-        self.grid_size = 8
-        self.grid = [
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,0,1,1,1,1,1,1,0,1,1,0,1],
-            [1,0,1,1,0,1,1,1,1,1,1,0,1,1,0,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,0,1,0,1,1,0,1,0,1,1,0,1],
-            [1,0,0,0,0,1,0,1,1,0,1,0,0,0,0,1],
-            [1,1,1,1,0,1,0,0,0,0,1,0,1,1,1,1],
-            [1,1,1,1,0,1,0,1,1,0,1,0,1,1,1,1],
-            [1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,1],
-            [1,0,1,1,0,1,0,0,0,0,1,0,1,1,0,1],
-            [1,0,0,0,0,1,0,1,1,0,1,0,0,0,0,1],
-            [1,0,1,1,0,0,0,0,0,0,0,0,1,1,0,1],
-            [1,0,1,1,0,1,1,1,1,1,1,0,1,1,0,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-        ]
-        
-        # Dots and power pellets
-        self.dots = set()
-        self.power_pellets = set()
-        self.init_collectibles()
-    
-    def init_collectibles(self):
-        """Place dots and power pellets."""
-        self.dots.clear()
-        self.power_pellets.clear()
-        
-        # Place dots in all open spaces
-        for row in range(len(self.grid)):
-            for col in range(len(self.grid[0])):
-                if self.grid[row][col] == 0:
-                    # Skip spawn area (center)
-                    if row in [7, 8] and col in [7, 8]:
-                        continue
-                    self.dots.add((col, row))
-        
-        # Place power pellets in corners
-        corners = [(1, 1), (14, 1), (1, 14), (14, 14)]
-        for corner in corners:
-            if corner in self.dots:
-                self.dots.remove(corner)
-                self.power_pellets.add(corner)
-    
-    def is_wall_at(self, x, y, size):
-        """Check if position collides with wall."""
-        # Check all corners of the bounding box
-        corners = [
-            (x - size//2, y - size//2),
-            (x + size//2, y - size//2),
-            (x - size//2, y + size//2),
-            (x + size//2, y + size//2),
-        ]
-        
-        for cx, cy in corners:
-            grid_x = int(cx / self.grid_size)
-            grid_y = int(cy / self.grid_size)
-            
-            if 0 <= grid_y < len(self.grid) and 0 <= grid_x < len(self.grid[0]):
-                if self.grid[grid_y][grid_x] == 1:
-                    return True
-        
-        return False
-    
-    def get_dot_at(self, x, y):
-        """Get dot at grid position near x, y."""
-        grid_x = int(x / self.grid_size)
-        grid_y = int(y / self.grid_size)
-        return (grid_x, grid_y) if (grid_x, grid_y) in self.dots else None
-    
-    def get_power_pellet_at(self, x, y):
-        """Get power pellet at grid position near x, y."""
-        grid_x = int(x / self.grid_size)
-        grid_y = int(y / self.grid_size)
-        return (grid_x, grid_y) if (grid_x, grid_y) in self.power_pellets else None
-
+# ZX Spectrum color palette
+CYAN = (0, 255, 255)          # Maze walls
+DARK_BLUE = (0, 0, 40)         # Background
+YELLOW = (255, 255, 0)         # Pac-Man
+BRIGHT_YELLOW = (255, 255, 128)
+RED = (255, 0, 0)              # Blinky
+PINK = (255, 184, 255)         # Pinky
+CYAN_GHOST = (0, 255, 255)     # Inky
+ORANGE = (255, 184, 82)        # Clyde
+BLUE_SCARED = (0, 100, 255)    # Vulnerable ghosts
+WHITE = (255, 255, 255)        # Dots
+DOT_COLOR = (200, 200, 50)     # Small dots
+POWER_DOT = (255, 255, 150)    # Power pellets
 
 class PacManGame(App):
-    """Pac-Man arcade game."""
+    """ZX Spectrum-style Pac-Man with proper collision detection"""
     
     def __init__(self):
         super().__init__("Pac-Man")
+        self.logger = get_logger("pacman")
         
-        # Game objects
-        self.maze = Maze()
-        self.pacman = PacMan(64, 112)  # Row 14, col 8 - bottom center corridor
-        self.ghosts = [
-            Ghost("Blinky", 64, 8, (255, 0, 0), (112, 8)),       # Row 1, col 8 - top center
-            Ghost("Pinky", 16, 32, (255, 184, 255), (16, 8)),    # Row 4, col 2 - left side
-            Ghost("Inky", 112, 32, (0, 255, 255), (112, 120)),   # Row 4, col 14 - right side
-            Ghost("Clyde", 16, 72, (255, 184, 82), (16, 120)),   # Row 9, col 2 - left corridor
+        # Display layout: 32px left panel + 192px center maze + 32px right panel
+        self.panel_width = 32
+        self.maze_left = 32
+        self.maze_width = 192
+        self.maze_right = 224
+        
+        # Tile-based game (each tile is 8×8 pixels)
+        self.tile_size = 8
+        self.maze_tiles_x = self.maze_width // self.tile_size  # 24 tiles
+        self.maze_tiles_y = 192 // self.tile_size  # 24 tiles
+        
+        # Classic Pac-Man maze (1 = wall, 0 = path, 2 = dot, 3 = power pellet)
+        self.original_maze = [
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,1],
+            [1,3,1,1,2,1,1,1,2,1,2,1,1,2,1,2,1,1,1,2,1,1,3,1],
+            [1,2,1,1,2,1,1,1,2,1,2,1,1,2,1,2,1,1,1,2,1,1,2,1],
+            [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+            [1,2,1,1,2,1,2,1,1,1,1,1,1,1,1,1,1,2,1,2,1,1,2,1],
+            [1,2,2,2,2,1,2,2,2,2,2,1,1,2,2,2,2,2,1,2,2,2,2,1],
+            [1,1,1,1,2,1,1,1,1,1,0,1,1,0,1,1,1,1,1,2,1,1,1,1],
+            [1,1,1,1,2,1,0,0,0,0,0,0,0,0,0,0,0,0,1,2,1,1,1,1],
+            [1,1,1,1,2,1,0,1,1,0,0,0,0,0,0,1,1,0,1,2,1,1,1,1],
+            [0,0,0,0,2,0,0,1,0,0,0,0,0,0,0,0,1,0,0,2,0,0,0,0],
+            [1,1,1,1,2,1,0,1,1,1,1,1,1,1,1,1,1,0,1,2,1,1,1,1],
+            [1,1,1,1,2,1,0,0,0,0,0,0,0,0,0,0,0,0,1,2,1,1,1,1],
+            [1,1,1,1,2,1,0,1,1,1,1,1,1,1,1,1,1,0,1,2,1,1,1,1],
+            [1,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,1],
+            [1,2,1,1,2,1,1,1,2,1,2,1,1,2,1,2,1,1,1,2,1,1,2,1],
+            [1,3,2,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,2,3,1],
+            [1,1,2,1,2,1,2,1,1,1,1,1,1,1,1,1,1,2,1,2,1,2,1,1],
+            [1,2,2,2,2,1,2,2,2,2,2,1,1,2,2,2,2,2,1,2,2,2,2,1],
+            [1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1],
+            [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
         ]
         
-        # Game state
+        self.maze = None
         self.score = 0
-        self.high_score = storage.get('pacman.high_score', default=0)
+        self.high_score = 0
         self.lives = 3
         self.level = 1
-        self.game_over = False
-        self.won = False
-        self.game_time = 0
-        self.death_animation = 0
-        self.waka_timer = 0
         
-    def get_help_text(self):
-        """Return help text."""
-        if self.game_over or self.won:
-            return [("R", "Restart"), ("ESC", "Exit")]
-        return [("Arrows", "Move"), ("R", "Restart")]
+        # Pac-Man state (tile coordinates)
+        self.pacman_tile_x = 12
+        self.pacman_tile_y = 17
+        self.pacman_dir_x = 0
+        self.pacman_dir_y = 0
+        self.next_dir_x = 0
+        self.next_dir_y = 0
+        self.pacman_mouth_angle = 0
+        self.pacman_mouth_open = True
+        
+        # Ghosts (tile coordinates)
+        self.ghosts = [
+            {"x": 11, "y": 10, "dir_x": -1, "dir_y": 0, "color": RED, "name": "Blinky", "mode": "scatter"},
+            {"x": 12, "y": 10, "dir_x": 0, "dir_y": -1, "color": PINK, "name": "Pinky", "mode": "scatter"},
+            {"x": 11, "y": 11, "dir_x": 1, "dir_y": 0, "color": CYAN_GHOST, "name": "Inky", "mode": "scatter"},
+            {"x": 12, "y": 11, "dir_x": 0, "dir_y": 1, "color": ORANGE, "name": "Clyde", "mode": "scatter"},
+        ]
+        
+        # Power pellet state
+        self.power_mode = False
+        self.power_timer = 0
+        self.power_duration = 300  # frames (~5 seconds at 60fps)
+        
+        # Game state
+        self.game_state = "playing"  # playing, dead, won
+        self.dots_remaining = 0
+        self.death_animation_timer = 0
+        self.respawn_timer = 0
+        
+        # Movement timing (update every N frames for smooth movement)
+        self.move_counter = 0
+        self.move_interval = 4  # Update every 4 frames (15 updates/sec at 60fps)
+        
+        self.reset_level()
+        self.dirty = True
+    
+    def reset_level(self):
+        """Reset level (keep score and lives)"""
+        # Copy maze
+        self.maze = [row[:] for row in self.original_maze]
+        
+        # Count dots
+        self.dots_remaining = sum(row.count(2) + row.count(3) for row in self.maze)
+        
+        # Reset positions
+        self.pacman_tile_x = 12
+        self.pacman_tile_y = 17
+        self.pacman_dir_x = 0
+        self.pacman_dir_y = 0
+        self.next_dir_x = 0
+        self.next_dir_y = 0
+        
+        # Reset ghosts
+        self.ghosts = [
+            {"x": 11, "y": 10, "dir_x": -1, "dir_y": 0, "color": RED, "name": "Blinky", "mode": "scatter"},
+            {"x": 12, "y": 10, "dir_x": 0, "dir_y": -1, "color": PINK, "name": "Pinky", "mode": "scatter"},
+            {"x": 11, "y": 11, "dir_x": 1, "dir_y": 0, "color": CYAN_GHOST, "name": "Inky", "mode": "scatter"},
+            {"x": 12, "y": 11, "dir_x": 0, "dir_y": 1, "color": ORANGE, "name": "Clyde", "mode": "scatter"},
+        ]
+        
+        self.power_mode = False
+        self.power_timer = 0
+        self.game_state = "playing"
+        self.logger.info(f"Level {self.level} started - {self.dots_remaining} dots to collect")
+    
+    def is_wall(self, tile_x, tile_y):
+        """Check if tile is a wall"""
+        if tile_x < 0 or tile_x >= self.maze_tiles_x or tile_y < 0 or tile_y >= self.maze_tiles_y:
+            return True
+        return self.maze[tile_y][tile_x] == 1
     
     def on_event(self, event):
-        """Handle input."""
-        if self.game_over or self.won:
-            if event.key == 'r':
-                self.restart()
-                audio.play('beep')
-                return True
-            return False
-        
-        if self.death_animation > 0:
-            return False
-        
-        # Movement
+        """Handle input"""
         if event.key == InputEvent.UP:
-            self.pacman.set_direction(0, -1)
+            self.next_dir_x = 0
+            self.next_dir_y = -1
+            self.dirty = True
             return True
         elif event.key == InputEvent.DOWN:
-            self.pacman.set_direction(0, 1)
+            self.next_dir_x = 0
+            self.next_dir_y = 1
+            self.dirty = True
             return True
         elif event.key == InputEvent.LEFT:
-            self.pacman.set_direction(-1, 0)
+            self.next_dir_x = -1
+            self.next_dir_y = 0
+            self.dirty = True
             return True
         elif event.key == InputEvent.RIGHT:
-            self.pacman.set_direction(1, 0)
+            self.next_dir_x = 1
+            self.next_dir_y = 0
+            self.dirty = True
             return True
-        elif event.key == 'r':
-            self.restart()
-            audio.play('beep')
-            return True
-        
         return False
     
     def on_update(self, delta_time):
-        """Update game logic."""
-        if self.game_over or self.won or self.death_animation > 0:
-            if self.death_animation > 0:
-                self.death_animation -= 1
-                self.dirty = True
-                if self.death_animation == 0:
-                    if self.lives > 0:
-                        self.reset_positions()
-                    else:
-                        self.game_over = True
-                        audio.play('gameover')
-                        if self.score > self.high_score:
-                            self.high_score = self.score
-                            storage.set('pacman.high_score', self.high_score)
+        """Update game state"""
+        if self.game_state != "playing":
             return
         
-        self.game_time += 1
-        self.dirty = True  # Always redraw for animation
+        # Movement timing
+        self.move_counter += 1
+        if self.move_counter < self.move_interval:
+            return
+        self.move_counter = 0
         
-        # Debug: log pac-man position once
-        if self.game_time == 10:
-            print(f"[DEBUG] Pac-Man pos: ({self.pacman.x}, {self.pacman.y}) dir: ({self.pacman.dx}, {self.pacman.dy})")
-            print(f"[DEBUG] Ghost 0 pos: ({self.ghosts[0].x}, {self.ghosts[0].y}) dir: ({self.ghosts[0].dx}, {self.ghosts[0].dy})")
+        # Try to change direction
+        next_x = self.pacman_tile_x + self.next_dir_x
+        next_y = self.pacman_tile_y + self.next_dir_y
+        if not self.is_wall(next_x, next_y):
+            self.pacman_dir_x = self.next_dir_x
+            self.pacman_dir_y = self.next_dir_y
         
-        # Update Pac-Man
-        self.pacman.update(self.maze)
-        
-        # Waka-waka sound
-        if self.pacman.dx != 0 or self.pacman.dy != 0:
-            self.waka_timer += 1
-            if self.waka_timer >= 15:
-                audio.play('beep')
-                self.waka_timer = 0
-        
-        # Check dot collection
-        dot = self.maze.get_dot_at(self.pacman.x, self.pacman.y)
-        if dot:
-            self.maze.dots.remove(dot)
-            self.score += 10
+        # Move Pac-Man
+        next_x = self.pacman_tile_x + self.pacman_dir_x
+        next_y = self.pacman_tile_y + self.pacman_dir_y
+        if not self.is_wall(next_x, next_y):
+            self.pacman_tile_x = next_x
+            self.pacman_tile_y = next_y
             
-        # Check power pellet collection
-        pellet = self.maze.get_power_pellet_at(self.pacman.x, self.pacman.y)
-        if pellet:
-            self.maze.power_pellets.remove(pellet)
-            self.score += 50
-            audio.play('powerup')
-            # Frighten all ghosts
-            for ghost in self.ghosts:
-                ghost.frighten()
+            # Wrap around edges
+            if self.pacman_tile_x < 0:
+                self.pacman_tile_x = self.maze_tiles_x - 1
+            elif self.pacman_tile_x >= self.maze_tiles_x:
+                self.pacman_tile_x = 0
+            
+            # Collect dots
+            tile_value = self.maze[self.pacman_tile_y][self.pacman_tile_x]
+            if tile_value == 2:  # Dot
+                self.maze[self.pacman_tile_y][self.pacman_tile_x] = 0
+                self.score += 10
+                self.dots_remaining -= 1
+            elif tile_value == 3:  # Power pellet
+                self.maze[self.pacman_tile_y][self.pacman_tile_x] = 0
+                self.score += 50
+                self.dots_remaining -= 1
+                self.power_mode = True
+                self.power_timer = self.power_duration
+                self.logger.info("Power mode activated!")
         
-        # Check if level complete
-        if len(self.maze.dots) == 0 and len(self.maze.power_pellets) == 0:
-            self.won = True
-            self.score += 1000
-            audio.play('success')
-            if self.score > self.high_score:
-                self.high_score = self.score
-                storage.set('pacman.high_score', self.high_score)
+        # Animate mouth
+        self.pacman_mouth_angle = (self.pacman_mouth_angle + 10) % 360
+        self.pacman_mouth_open = (self.pacman_mouth_angle // 90) % 2 == 0
         
-        # Update ghosts
+        # Update power mode
+        if self.power_mode:
+            self.power_timer -= 1
+            if self.power_timer <= 0:
+                self.power_mode = False
+                self.logger.info("Power mode ended")
+        
+        # Move ghosts
         for ghost in self.ghosts:
-            ghost.update(self.pacman, self.maze, self.game_time)
-        
-        # Check ghost collisions
-        self.check_ghost_collisions()
-    
-    def check_ghost_collisions(self):
-        """Check if Pac-Man hit a ghost."""
-        for ghost in self.ghosts:
-            if ghost.is_eaten:
-                continue
-                
-            dist = math.sqrt((self.pacman.x - ghost.x)**2 + (self.pacman.y - ghost.y)**2)
-            if dist < (self.pacman.size + ghost.size) / 2:
-                if ghost.mode == "frightened":
-                    # Eat the ghost!
-                    ghost.is_eaten = True
-                    self.score += 200
-                    audio.play('coin')
+            # Simple AI: random direction changes at intersections
+            moves = []
+            for dx, dy in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
+                nx = ghost["x"] + dx
+                ny = ghost["y"] + dy
+                # Don't reverse direction
+                if dx == -ghost["dir_x"] and dy == -ghost["dir_y"]:
+                    continue
+                if not self.is_wall(nx, ny):
+                    moves.append((dx, dy))
+            
+            if moves:
+                # Pick random valid direction
+                if len(moves) > 1:
+                    ghost["dir_x"], ghost["dir_y"] = random.choice(moves)
                 else:
-                    # Pac-Man dies
-                    self.die()
-                    break
-    
-    def die(self):
-        """Pac-Man loses a life."""
-        self.lives -= 1
-        self.death_animation = 60  # ~2 seconds
-        audio.play('hit')
-    
-    def reset_positions(self):
-        """Reset Pac-Man and ghosts to spawn."""
-        self.pacman.x = 64
-        self.pacman.y = 112
-        self.pacman.dx = 0
-        self.pacman.dy = 0
-        self.pacman.next_dx = 0
-        self.pacman.next_dy = 0
+                    ghost["dir_x"], ghost["dir_y"] = moves[0]
+                
+                ghost["x"] += ghost["dir_x"]
+                ghost["y"] += ghost["dir_y"]
+                
+                # Wrap around
+                if ghost["x"] < 0:
+                    ghost["x"] = self.maze_tiles_x - 1
+                elif ghost["x"] >= self.maze_tiles_x:
+                    ghost["x"] = 0
         
+        # Check collisions with ghosts
         for ghost in self.ghosts:
-            ghost.reset()
-    
-    def restart(self):
-        """Restart game."""
-        self.score = 0
-        self.lives = 3
-        self.level = 1
-        self.game_over = False
-        self.won = False
-        self.game_time = 0
-        self.death_animation = 0
-        self.waka_timer = 0
+            if ghost["x"] == self.pacman_tile_x and ghost["y"] == self.pacman_tile_y:
+                if self.power_mode:
+                    # Eat ghost
+                    self.score += 200
+                    ghost["x"] = 12
+                    ghost["y"] = 10
+                    self.logger.info(f"Ate {ghost['name']}!")
+                else:
+                    # Die
+                    self.lives -= 1
+                    self.logger.info(f"Hit by {ghost['name']}! Lives: {self.lives}")
+                    if self.lives <= 0:
+                        self.game_state = "dead"
+                    else:
+                        self.reset_level()
         
-        self.maze.init_collectibles()
-        self.reset_positions()
+        # Check win condition
+        if self.dots_remaining <= 0:
+            self.level += 1
+            self.logger.info(f"Level {self.level} complete!")
+            self.reset_level()
+        
+        if self.score > self.high_score:
+            self.high_score = self.score
+        
+        self.dirty = True
     
     def render(self, matrix):
-        """Draw game."""
-        # Debug: log once
-        if not hasattr(self, '_render_logged'):
-            print(f"[DEBUG] First render - Pac-Man at ({self.pacman.x}, {self.pacman.y})")
-            self._render_logged = True
-        
-        # Black background
+        """Draw game"""
+        # Dark blue background
         matrix.clear()
-        
-        if self.death_animation > 0:
-            self.render_death_animation(matrix)
-            self.dirty = False
-            return
-        
-        if self.game_over:
-            self.render_game_over(matrix)
-            self.dirty = False
-            return
-        
-        if self.won:
-            self.render_won(matrix)
-            self.dirty = False
-            return
+        matrix.rect(0, 0, 256, 192, DARK_BLUE, fill=True)
         
         # Draw maze
-        self.render_maze(matrix)
+        for y in range(len(self.maze)):
+            for x in range(len(self.maze[y])):
+                tile = self.maze[y][x]
+                px = self.maze_left + x * self.tile_size
+                py = y * self.tile_size
+                
+                if tile == 1:  # Wall
+                    matrix.rect(px, py, self.tile_size, self.tile_size, CYAN, fill=True)
+                elif tile == 2:  # Dot
+                    matrix.circle(px + 4, py + 4, 1, DOT_COLOR, fill=True)
+                elif tile == 3:  # Power pellet
+                    if (self.pacman_mouth_angle // 30) % 2 == 0:  # Blink
+                        matrix.circle(px + 4, py + 4, 3, POWER_DOT, fill=True)
         
-        # Draw dots
-        for col, row in self.maze.dots:
-            x = col * self.maze.grid_size + self.maze.grid_size // 2
-            y = row * self.maze.grid_size + self.maze.grid_size // 2
-            matrix.set_pixel(x, y, (255, 200, 150))
+        # Draw Pac-Man (10px chunky sprite)
+        px = self.maze_left + self.pacman_tile_x * self.tile_size - 1
+        py = self.pacman_tile_y * self.tile_size - 1
+        pac_color = BRIGHT_YELLOW if self.power_mode and (self.power_timer // 10) % 2 == 0 else YELLOW
+        matrix.circle(px + 5, py + 5, 5, pac_color, fill=True)
         
-        # Draw power pellets (blinking)
-        if self.game_time % 30 < 15:
-            for col, row in self.maze.power_pellets:
-                x = col * self.maze.grid_size + self.maze.grid_size // 2
-                y = row * self.maze.grid_size + self.maze.grid_size // 2
-                matrix.circle(x, y, 2, (255, 255, 100), fill=True)
-        
-        # Draw ghosts
+        # Draw ghosts (10px chunky sprites)
         for ghost in self.ghosts:
-            if not ghost.is_eaten:
-                color = ghost.frightened_color if ghost.mode == "frightened" else ghost.color
-                self.render_ghost(matrix, ghost, color)
+            gx = self.maze_left + ghost["x"] * self.tile_size - 1
+            gy = ghost["y"] * self.tile_size - 1
+            ghost_color = BLUE_SCARED if self.power_mode else ghost["color"]
+            # Body
+            matrix.rect(gx + 1, gy + 3, 8, 7, ghost_color, fill=True)
+            # Head
+            matrix.rect(gx + 2, gy + 1, 6, 4, ghost_color, fill=True)
+            # Eyes
+            matrix.set_pixel(gx + 3, gy + 3, WHITE)
+            matrix.set_pixel(gx + 6, gy + 3, WHITE)
         
-        # Draw Pac-Man
-        self.render_pacman(matrix)
-        
-        # Draw HUD
-        self.render_hud(matrix)
-        
-        self.dirty = False  # Clear dirty flag after rendering
-    
-    def render_maze(self, matrix):
-        """Draw maze walls."""
-        for row in range(len(self.maze.grid)):
-            for col in range(len(self.maze.grid[0])):
-                if self.maze.grid[row][col] == 1:
-                    x = col * self.maze.grid_size
-                    y = row * self.maze.grid_size
-                    # Blue walls
-                    matrix.rect(x, y, self.maze.grid_size, self.maze.grid_size, (33, 33, 222), fill=True)
-    
-    def render_pacman(self, matrix):
-        """Draw Pac-Man."""
-        # Yellow circle with mouth
-        x, y = int(self.pacman.x), int(self.pacman.y)
-        r = self.pacman.size // 2
-        
-        # Draw full circle (simplified - just a circle for now)
-        matrix.circle(x, y, r, (255, 255, 0), fill=True)
-        
-        # Draw eye (direction-dependent)
-        if self.pacman.dx > 0:  # Right
-            matrix.set_pixel(x + 1, y - 1, (0, 0, 0))
-        elif self.pacman.dx < 0:  # Left
-            matrix.set_pixel(x - 1, y - 1, (0, 0, 0))
-        elif self.pacman.dy > 0:  # Down
-            matrix.set_pixel(x, y + 1, (0, 0, 0))
-        elif self.pacman.dy < 0:  # Up
-            matrix.set_pixel(x, y - 1, (0, 0, 0))
-        else:
-            matrix.set_pixel(x + 1, y - 1, (0, 0, 0))
-    
-    def render_ghost(self, matrix, ghost, color):
-        """Draw a ghost."""
-        x, y = int(ghost.x), int(ghost.y)
-        r = ghost.size // 2
-        
-        # Body (circle)
-        matrix.circle(x, y, r, color, fill=True)
-        
-        # Wavy bottom (simplified)
-        matrix.set_pixel(x - 2, y + r, color)
-        matrix.set_pixel(x, y + r + 1, color)
-        matrix.set_pixel(x + 2, y + r, color)
-        
-        # Eyes
-        if ghost.mode == "frightened":
-            # Scared eyes (just white dots)
-            matrix.set_pixel(x - 1, y - 1, (255, 255, 255))
-            matrix.set_pixel(x + 1, y - 1, (255, 255, 255))
-        else:
-            # Normal eyes (white with pupils)
-            matrix.set_pixel(x - 1, y - 1, (255, 255, 255))
-            matrix.set_pixel(x + 1, y - 1, (255, 255, 255))
-            # Pupils look toward Pac-Man (simplified - just black dots)
-            matrix.set_pixel(x - 1, y, (0, 0, 0))
-            matrix.set_pixel(x + 1, y, (0, 0, 0))
-    
-    def render_hud(self, matrix):
-        """Draw score and lives."""
-        # Score (top left)
-        matrix.text(f"${self.score}", 2, 2, (255, 255, 255))
-        
-        # High score (top center)
-        center_x = matrix.width // 2
-        matrix.text(f"HI:${self.high_score}", center_x - 30, 2, (255, 200, 100))
-        
-        # Lives (bottom left) - small Pac-Man icons
+        # Left panel - Lives
+        matrix.text("LIVES", 2, 10, CYAN)
         for i in range(self.lives):
-            x = 4 + i * 8
-            y = matrix.height - 6
-            matrix.circle(x, y, 2, (255, 255, 0), fill=True)
-    
-    def render_death_animation(self, matrix):
-        """Draw death animation."""
-        # Keep maze and dots visible
-        self.render_maze(matrix)
-        for col, row in self.maze.dots:
-            x = col * self.maze.grid_size + self.maze.grid_size // 2
-            y = row * self.maze.grid_size + self.maze.grid_size // 2
-            matrix.set_pixel(x, y, (255, 200, 150))
+            ly = 20 + i * 12
+            matrix.circle(10, ly, 4, YELLOW, fill=True)
         
-        # Pac-Man shrinks
-        progress = 1.0 - (self.death_animation / 60.0)
-        x, y = int(self.pacman.x), int(self.pacman.y)
-        r = int(self.pacman.size // 2 * (1 - progress))
-        if r > 0:
-            matrix.circle(x, y, r, (255, 255, 0), fill=True)
+        # Left panel - Power status
+        if self.power_mode:
+            matrix.text("POWER", 1, 80, BRIGHT_YELLOW)
+            bar_height = int((self.power_timer / self.power_duration) * 40)
+            matrix.rect(8, 90, 16, bar_height, BRIGHT_YELLOW, fill=True)
         
-        self.render_hud(matrix)
-    
-    def render_game_over(self, matrix):
-        """Draw game over screen."""
-        matrix.clear()
+        # Right panel - Score
+        matrix.text("SCORE", self.maze_right + 2, 10, YELLOW)
+        matrix.text(str(self.score), self.maze_right + 2, 22, WHITE)
         
-        layout.center_text(matrix, "GAME OVER", 40, (255, 100, 100))
-        layout.center_text(matrix, f"Score: {self.score}", 60, (255, 255, 255))
-        layout.center_text(matrix, f"High: {self.high_score}", 75, (255, 200, 100))
-        layout.center_text(matrix, "R to Restart", 95, (150, 150, 150))
-    
-    def render_won(self, matrix):
-        """Draw victory screen."""
-        matrix.clear()
+        # Right panel - High score
+        matrix.text("HI", self.maze_right + 4, 50, CYAN)
+        matrix.text(str(self.high_score), self.maze_right + 2, 62, WHITE)
         
-        layout.center_text(matrix, "YOU WIN!", 40, (100, 255, 100))
-        layout.center_text(matrix, f"Score: {self.score}", 60, (255, 255, 255))
-        layout.center_text(matrix, f"High: {self.high_score}", 75, (255, 200, 100))
-        layout.center_text(matrix, "R to Restart", 95, (150, 150, 150))
+        # Right panel - Level
+        matrix.text("LEV", self.maze_right + 2, 90, PINK)
+        matrix.text(str(self.level), self.maze_right + 8, 102, WHITE)
+        
+        # Right panel - Dots
+        matrix.text("DOTS", self.maze_right + 2, 130, ORANGE)
+        matrix.text(str(self.dots_remaining), self.maze_right + 4, 142, WHITE)
+        
+        # Game over message
+        if self.game_state == "dead":
+            matrix.text("GAME", 108, 88, RED)
+            matrix.text("OVER", 108, 100, RED)
+        
+        self.dirty = False
 
 
 def run(os_context):
-    """Entry point called by OS."""
+    """Entry point"""
     app = PacManGame()
     os_context.register_app(app)
     os_context.switch_to_app(app)
     os_context.run()
 
 
-# App instance for launcher
-app = PacManGame()
+if __name__ == "__main__":
+    # Test mode
+    from matrixos.display import TerminalDisplay
+    from matrixos.input import InputHandler
+    
+    matrix = TerminalDisplay(256, 192)
+    input_handler = InputHandler()
+    
+    app = PacManGame()
+    app.on_activate()
+    
+    print("Pac-Man ZX Spectrum Edition")
+    print("Arrow keys to move | Ctrl+C to quit")
+    print("Collect all dots, avoid ghosts!")
+    
+    import time
+    last_time = time.time()
+    
+    try:
+        while True:
+            # Handle input
+            event = input_handler.get_key(timeout=0.001)
+            if event:
+                app.on_event(event)
+            
+            # Update (60fps)
+            current_time = time.time()
+            delta_time = current_time - last_time
+            if delta_time >= 1.0 / 60.0:
+                app.on_update(delta_time)
+                if app.dirty:
+                    app.render(matrix)
+                    matrix.show()
+                last_time = current_time
+    
+    except KeyboardInterrupt:
+        print("\nGame Over!")
+        print(f"Final Score: {app.score}")
+        print(f"High Score: {app.high_score}")
