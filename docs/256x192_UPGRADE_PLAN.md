@@ -1,4 +1,5 @@
 # MatrixOS 256×192 Resolution Upgrade Plan
+
 ## ZX Spectrum Standard Resolution
 
 **Target Resolution:** 256×192 pixels (ZX Spectrum standard)  
@@ -22,10 +23,12 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 ## 🎮 Game Apps Analysis
 
 ### 1. **Snake** (`examples/snake/main.py`)
+
 **Purpose:** Classic snake game with grow-by-eating-food gameplay  
 **Current Layout:** 128×128 playfield with 4×4 pixel snake segments
 
 **Hardcoded Values:**
+
 - Line 46: `start_x, start_y = 64, 64` - Snake start position
 - Line 65: `x = random.randint(2, 125) & ~3` - Food spawn X bounds
 - Line 66: `y = random.randint(2, 125) & ~3` - Food spawn Y bounds
@@ -35,6 +38,7 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 - Line 178: `matrix.text(f"Hi:{self.high_score}", 75, 1, ...)` - High score position
 
 **Recommendations for 256×192:**
+
 - **Game area:** Use full 256×192 (no side panels needed for this simple game)
 - **Snake segments:** Keep at 4×4 or increase to 6×6 for better visibility
 - **Start position:** `(128, 96)` - center of new resolution
@@ -45,6 +49,7 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 - **Win condition:** Increase from 200 segments to 600+ (3× more space)
 
 **Visual Improvements:**
+
 - Add decorative border patterns in ZX Spectrum style
 - Larger text (8px height instead of 6px)
 - More dynamic background colors
@@ -55,10 +60,12 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 ---
 
 ### 2. **Frogger** (`examples/frogger/main.py`)
+
 **Purpose:** Cross road and river to reach home safely  
 **Current Layout:** Road (3 lanes), safe zone, river (3 lanes), goal zones
 
 **Hardcoded Values:**
+
 - Line 52: `grid_size = 8` - Movement grid
 - Line 135: `self.start_x = width // 2` - Uses width parameter (good!)
 - Line 136: `self.start_y = height - 6` - Uses height parameter (good!)
@@ -67,17 +74,19 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 - Multiple vehicle/log creation loops reference lane positions
 
 **Recommendations for 256×192:**
+
 - **Grid size:** Increase from 8 to 12 pixels (already implemented at line 134)
 - **Frog sprite:** 8×8 pixels (up from 6×6)
 - **Add 2 more lanes:** 5 road lanes + 5 river lanes (vs 3+3)
 - **Vehicle sizes:** Scale up 1.5× (24px cars, 36px trucks vs 16/24)
-- **Add side panels:** 
+- **Add side panels:**
   - Left 32px: Lives display with frog icons
   - Right 32px: Level indicator and timer
   - Center 192px: Active playfield
 - **Goal zones:** 5 homes at top instead of random spawns
 
 **Visual Improvements:**
+
 - Larger, more detailed vehicles (add wheels, windows)
 - Animated water ripples in river
 - Distinct vehicle types per lane (cars, trucks, race cars)
@@ -89,10 +98,12 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 ---
 
 ### 3. **Space Invaders** (`examples/space_invaders/main.py`)
+
 **Purpose:** Classic arcade shooter with descending alien waves  
 **Current Layout:** 8×4 alien grid, player at bottom, HUD at top/bottom edges
 
 **Hardcoded Values:**
+
 - Line 29: `self.player_x = (128 - 12) // 2` - Player center position
 - Line 30: `self.player_y = 110` - Player Y position
 - Line 73: `rows = 4`, `cols = 8` - Alien formation
@@ -100,6 +111,7 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 - Line 147: `if bullet['y'] > 128` - Bottom boundary
 
 **Recommendations for 256×192:**
+
 - **Game area:** Left 32px panel (lives/wave), center 192px game, right 32px panel (power-ups/score)
 - **Alien formation:** 12 columns × 5 rows (vs 8×4) = 60 aliens
 - **Alien size:** Increase from 10×8 to 14×12 pixels
@@ -114,6 +126,7 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
   - Power-up system (rapid fire, shield)
 
 **Visual Improvements:**
+
 - Animated alien sprites (2 frames per alien type)
 - Colorful explosion effects
 - Starfield background
@@ -125,21 +138,24 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 ---
 
 ### 4. **Pac-Man** (`examples/pacman/main.py`)
+
 **Purpose:** Navigate maze, eat dots, avoid/chase ghosts  
 **Current Layout:** Maze fills 128×128 with tight corridors
 
 **Hardcoded Values:**
+
 - Line 28: `self.size = 6` - Pac-Man size
 - Line 67: `if self.x < 0` and `elif self.x > 128` - Screen wrapping
 - Line 90: `self.size = 6` - Ghost size
 - Multiple maze coordinate references
 
 **Recommendations for 256×192:**
+
 - **Game area:** Center 192×192 square for maze (maintain 1:1 aspect ratio)
-- **Side panels:** 
+- **Side panels:**
   - Left 32px: Lives, level, fruit
   - Right 32px: Ghost mode indicators, score
-- **Sprite sizes:** 
+- **Sprite sizes:**
   - Pac-Man: 10×10 pixels (from 6×6)
   - Ghosts: 10×10 pixels (from 6×6)
   - Dots: 2×2 pixels
@@ -152,6 +168,7 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
   - Ready/Game Over animations
 
 **Visual Improvements:**
+
 - More detailed ghost sprites (eyes look in direction of travel)
 - Better Pac-Man mouth animation (3 frames)
 - Maze wall patterns (ZX Spectrum style)
@@ -163,10 +180,12 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 ---
 
 ### 5. **Platformer** (`examples/platformer/main.py`)
+
 **Purpose:** Side-scrolling jump-and-run with coins and enemies  
 **Current Layout:** Horizontal scrolling world, 128px viewport
 
 **Hardcoded Values:**
+
 - Line 29: `self.player_x = 20` - Start position
 - Line 79: `{'x': 0, 'y': 108, 'width': 600, 'height': 10}` - Ground platform
 - Line 127: `self.player_x = min(550, self.player_x + ...)` - Right boundary
@@ -175,6 +194,7 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 - Multiple platform Y positions hardcoded
 
 **Recommendations for 256×192:**
+
 - **Viewport:** Full 256×192 (double horizontal view!)
 - **World width:** Expand from 600 to 1200+ pixels
 - **Player sprite:** 12×16 pixels (from 8×10)
@@ -189,6 +209,7 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
   - Checkpoint flags
 
 **Visual Improvements:**
+
 - Layered parallax scrolling backgrounds
 - Larger, more detailed sprites with animation frames
 - Particle effects for jumps/landings
@@ -200,16 +221,19 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 ---
 
 ### 6. **Tetris** (`examples/tetris/main.py`)
+
 **Purpose:** Falling block puzzle game  
 **Current Layout:** 10×20 playfield at 5px blocks = 50×100 game area, HUD on right
 
 **Hardcoded Values:**
+
 - Line 54: `self.block_size = 5` - Tetromino block size
 - Line 55: `self.field_x = 8` - Playfield X offset
 - Line 56: `self.field_y = 8` - Playfield Y offset
 - Line 54-55: `self.field_width = 10`, `self.field_height = 20` - Grid dimensions
 
 **Recommendations for 256×192:**
+
 - **Block size:** Increase from 5 to 8 pixels
 - **Playfield:** 10×20 grid = 80×160 pixels (centered)
 - **Playfield position:** X=48, Y=16 (centered in 256×192)
@@ -229,6 +253,7 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
   - Background pattern animations
 
 **Visual Improvements:**
+
 - Gradient fills on blocks
 - Better border graphics around playfield
 - Animated line clear effect
@@ -240,10 +265,12 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 ---
 
 ### 7. **Breakout** (`examples/breakout/main.py`)
+
 **Purpose:** Brick-breaking with paddle and ball  
 **Current Layout:** 8 columns × 6 rows of bricks at top, paddle at bottom
 
 **Hardcoded Values:**
+
 - Line 29: `self.paddle_width = 20` - Paddle size
 - Line 30: `self.paddle_y = 0` - Set in on_activate
 - Line 57: `self.paddle_x = (128 - self.paddle_width) // 2` - Center paddle
@@ -254,6 +281,7 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 - Line 145: `if self.ball_y >= 128` - Ball off bottom
 
 **Recommendations for 256×192:**
+
 - **Game area:** Full 256×192 with symmetric borders
 - **Brick grid:** 16 columns × 8 rows (double current)
 - **Brick size:** 14×6 pixels (same as current)
@@ -268,6 +296,7 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
   - Ball trails
 
 **Visual Improvements:**
+
 - Animated power-up capsules falling
 - Better explosion effects when bricks break
 - Paddle glow effect
@@ -279,16 +308,19 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 ---
 
 ### 8. **Clock** (`examples/clock/main.py`)
+
 **Purpose:** Analog and digital time display  
 **Current Layout:** Analog clock centered, digital time below, date at top
 
 **Hardcoded Values:**
+
 - Line 64: `self.draw_analog_clock(matrix, 64, 64, 50)` - Center position and radius
 - Line 68: `matrix.text(date_str, 25, 5, ...)` - Date position
 - Line 75: `matrix.text(time_str, 15, 50, ...)` - Time position
 - Various positioning for different modes
 
 **Recommendations for 256×192:**
+
 - **Analog-only mode:**
   - Clock radius: 80 pixels (from 50) - much more detailed
   - Center: (128, 96)
@@ -308,6 +340,7 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
   - Countdown timer integration
 
 **Visual Improvements:**
+
 - Gradient clock face
 - Ornate hour markers
 - Drop shadows on hands
@@ -319,10 +352,12 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 ---
 
 ### 9. **News** (`examples/news/main.py`)
+
 **Purpose:** Scrolling news headlines with category selection  
 **Current Layout:** Title bar at top, scrolling text in middle, instructions at bottom
 
 **Hardcoded Values:**
+
 - Line 17: `self.scroll_x = 128` - Scroll start position
 - Line 41: `self.scroll_x = 128` - Reset scroll
 - Line 77: `text_width = len(current_text) * 6` - Approximate width
@@ -332,6 +367,7 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 - Multiple text positions hardcoded
 
 **Recommendations for 256×192:**
+
 - **Layout:**
   - Top banner (256×24): "LIVE NEWS" with category tabs
   - Main area (256×120): Multiple scrolling headlines (3-4 at once)
@@ -347,6 +383,7 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
   - Favicon icons next to headlines
 
 **Visual Improvements:**
+
 - Color-coded categories
 - Breaking news banner animation
 - Fade in/out transitions between headlines
@@ -358,17 +395,20 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 ---
 
 ### 10. **Weather** (`examples/weather/main.py`)
+
 **Purpose:** Display current weather with background updates  
 **Current Layout:** City name, temperature, condition icon, forecast
 
 **Hardcoded Values:**
+
 - Most positioning done via text() calls with hardcoded X/Y
 - No explicit 128 references found, but layout assumes small screen
 
 **Recommendations for 256×192:**
+
 - **Layout:**
   - Top (256×48): City name, current temperature (large), condition
-  - Middle (256×96): 
+  - Middle (256×96):
     - Left half: Large weather icon (64×64 emoji or animation)
     - Right half: Details (humidity, wind, pressure, feels-like)
   - Bottom (256×48): 5-day forecast with mini icons and temps
@@ -381,6 +421,7 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
   - Wind direction compass
 
 **Visual Improvements:**
+
 - Animated weather conditions (rain falling, clouds moving, snow)
 - Temperature graph over time
 - Color-coded temperature scale
@@ -392,14 +433,17 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 ---
 
 ### 11. **Timer** (`examples/timer/main.py`)
+
 **Purpose:** Countdown timer with background alerts  
 **Current Layout:** Preset selection or countdown display with progress bar
 
 **Hardcoded Values:**
+
 - Uses `matrix.width` and `matrix.height` - already responsive! ✓
 - Line 169: `layout.center_text(...)` - Uses layout helpers ✓
 
 **Recommendations for 256×192:**
+
 - **Timer display:**
   - Huge countdown numbers (centered, 48px tall)
   - Circular progress indicator (radius 80)
@@ -414,6 +458,7 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
   - Sound selection
 
 **Visual Improvements:**
+
 - Animated countdown (scale/pulse effect)
 - Progress ring around numbers
 - Color changes as time runs low (green→yellow→red)
@@ -425,15 +470,18 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 ---
 
 ### 12. **Demos** (`examples/demos/main.py`)
+
 **Purpose:** Showcase LED matrix capabilities with visual effects  
 **Current Layout:** Menu with 8 demos (text, shapes, colors, etc.)
 
 **Hardcoded Values:**
+
 - Line 105: Uses scale factor `scale = width / 64` ✓
 - Line 114-129: Shapes demo scales properly ✓
 - Most demos use matrix.width/height - already responsive! ✓
 
 **Recommendations for 256×192:**
+
 - **Already well-designed!** Uses scaling and responsive layout
 - **Enhancements:**
   - Add more demo types:
@@ -447,6 +495,7 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
   - Text demo can show more font sizes
 
 **Visual Improvements:**
+
 - Larger pattern iterations in plasma/rainbow
 - More particles in animation demos
 - Side-by-side comparison mode
@@ -457,22 +506,25 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 ---
 
 ### 13. **Emoji Demo** (`examples/emoji_demo/main.py`)
+
 **Purpose:** Demonstrate emoji sprite system  
 **Current Layout:** Player sprite with coins and obstacles on 128×128 field
 
 **Hardcoded Values:**
+
 - Line 15: `x=64, y=64` - Player start (hardcoded center)
 - Line 26: `x=20 + i * 25` - Coin positions
 - Line 38: `x=30 + i * 35` - Obstacle positions
 - Line 108-118: Bounds checking `if self.player.x < 0`, `> 128`
 
 **Recommendations for 256×192:**
+
 - **Player start:** `(128, 96)` - new center
-- **Sprite sizes:** 
+- **Sprite sizes:**
   - Player: 24×24 (from 20×20)
   - Coins: 16×16 (from 12×12)
   - Obstacles: 20×20 (from 16×16)
-- **Layout:** 
+- **Layout:**
   - Coins in 8 positions across top: `x=24 + i*32, y=24`
   - Obstacles in 5 positions: `x=40 + i*48, y=140`
 - **Bounds:** Update to `0 to 256` and `0 to 192`
@@ -483,6 +535,7 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
   - Collision effect particles
 
 **Visual Improvements:**
+
 - Background grid
 - Particle effects on collection
 - Trail effects
@@ -494,16 +547,19 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 ---
 
 ### 14. **Settings** (`matrixos/apps/settings/main.py`)
+
 **Purpose:** Configure MatrixOS system settings  
 **Current Layout:** Menu list with detail screens
 
 **Hardcoded Values:**
+
 - Line 177: `matrix.text("SETTINGS", 2, 2, ...)` - Title
 - Line 180: Uses `layout.menu_list(...)` - responsive ✓
 - Line 183: `matrix.text("^v:NAV ENTER:SELECT", 2, matrix.height - 8, ...)` - Footer
 - Most layout uses matrix.width/height - responsive ✓
 
 **Recommendations for 256×192:**
+
 - **Already well-designed!** Uses layout helpers
 - **Enhancements:**
   - Two-column layout: menu on left (96px), details on right (160px)
@@ -514,6 +570,7 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
   - Storage usage bars
 
 **Visual Improvements:**
+
 - Icons next to menu items
 - Setting value previews in menu
 - Color-coded categories
@@ -527,12 +584,14 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 ## 📋 Implementation Priority Matrix
 
 ### Phase 1: High Priority (Weeks 1-2)
+
 1. **Snake** - Simple, great showcase for pixel-perfect grid games
 2. **Frogger** - Complex lanes, good test of layout scaling
 3. **Space Invaders** - Iconic arcade game, needs new formation logic
 4. **Pac-Man** - Complex maze, critical retro title
 
 ### Phase 2: Medium Priority (Weeks 3-4)
+
 5. **Platformer** - Scrolling mechanics, parallax potential
 6. **Tetris** - Classic puzzle, better UI space
 7. **Breakout** - Power-up system showcase
@@ -540,6 +599,7 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 9. **Weather** - Data visualization showcase
 
 ### Phase 3: Low Priority (Week 5)
+
 10. **Clock** - Aesthetic improvements, low priority
 11. **Timer** - Already responsive, minor tweaks
 12. **Demos** - Already responsive, add new demos
@@ -551,12 +611,14 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 ## 🔧 Framework Changes Needed
 
 ### Core Display System
+
 - [ ] Update default resolution from 128×128 to 256×192
 - [ ] Update `matrixos/display.py` for new dimensions
 - [ ] Update `matrixos/led_api.py` matrix creation
 - [ ] Ensure all matrix methods work at new resolution
 
 ### Layout Helpers (`matrixos/layout.py`)
+
 - [ ] Add `get_standard_game_area()` → returns (x, y, width, height) for 192×192 center
 - [ ] Add `get_side_panel_left()` → returns (0, 0, 32, 192)
 - [ ] Add `get_side_panel_right()` → returns (224, 0, 32, 192)
@@ -564,11 +626,13 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 - [ ] Add `scale_from_128()` helper to convert old coordinates
 
 ### Font System
+
 - [ ] Verify font rendering at new resolution
 - [ ] Consider 2× scale font option for large text
 - [ ] Add text measurement helper `get_text_width(text, scale=1)`
 
 ### Sprite System
+
 - [ ] Update emoji sprite sizes for new resolution
 - [ ] Add sprite scaling helpers
 - [ ] Ensure collision detection scales properly
@@ -578,13 +642,16 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 ## 🎨 Design Guidelines for 256×192
 
 ### ZX Spectrum Aesthetic
+
 - Use classic ZX Spectrum color palette when appropriate
 - Maintain chunky, pixel-perfect graphics
 - Keep "retro" feel while using modern capabilities
 - Border patterns in ZX style
 
 ### Layout Patterns
+
 **For arcade games:**
+
 ```
 ┌─────────────────────────────────────┐
 │ HUD / Score (256×12)                │
@@ -601,6 +668,7 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 ```
 
 **For utility apps:**
+
 ```
 ┌─────────────────────────────────────┐
 │ Title / Tab Bar (256×24)            │
@@ -615,12 +683,14 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 ```
 
 ### Typography
+
 - **Small text:** 6px height (current)
 - **Medium text:** 8px height (new standard)
 - **Large text:** 12px height (headers)
 - **Huge text:** 16-24px height (timer, scores)
 
 ### Sprite Sizes
+
 - **Tiny:** 8×8 (pickups, bullets)
 - **Small:** 12×12 (classic retro size)
 - **Medium:** 16×16 (new standard)
@@ -632,12 +702,14 @@ This upgrade doubles the horizontal resolution and increases vertical by 50%, pr
 ## 🧪 Testing Strategy
 
 ### For Each App:
+
 1. **Visual Test:** Does it look good? Use full screen space?
 2. **Gameplay Test:** Are mechanics preserved? Difficulty balanced?
 3. **Performance Test:** Still 60 FPS at 3× pixels?
 4. **Compatibility Test:** Works with framework changes?
 
 ### Test Checklist:
+
 - [ ] All hardcoded dimensions updated
 - [ ] No clipping or out-of-bounds issues
 - [ ] Text readable and well-positioned
@@ -706,4 +778,4 @@ matrix.rect(0, 12, 256, 180, border_color)  # Account for HUD
 
 ---
 
-*This plan provides a clear roadmap to upgrade MatrixOS to 256×192 resolution while maintaining the retro aesthetic and improving visual quality across all apps.*
+_This plan provides a clear roadmap to upgrade MatrixOS to 256×192 resolution while maintaining the retro aesthetic and improving visual quality across all apps._

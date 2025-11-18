@@ -1,6 +1,7 @@
 # 256×192 Upgrade Quick Reference
 
 ## Resolution Comparison
+
 - **Old:** 128×128 (16,384 pixels, 1:1 aspect)
 - **New:** 256×192 (49,152 pixels, 4:3 aspect)
 - **Increase:** 3× total pixels, 2× width, 1.5× height
@@ -8,21 +9,24 @@
 ## Common Transformations
 
 ### Center Points
+
 ```python
 # 128×128 → 256×192
 (64, 64) → (128, 96)
 ```
 
 ### Boundaries
+
 ```python
 # Width bounds
 0-128 → 0-256
 
-# Height bounds  
+# Height bounds
 0-128 → 0-192
 ```
 
 ### HUD Layouts
+
 ```python
 # Top HUD bar
 OLD: matrix.rect(0, 0, 128, 10, ...)
@@ -36,12 +40,14 @@ NEW: y = 180
 ### Standard Game Layouts
 
 #### Full Screen (Simple Games)
+
 ```python
 # Use entire 256×192 area
 game_area = (0, 12, 256, 180)  # Leave 12px for HUD
 ```
 
 #### Center Square (Maze Games)
+
 ```python
 # Keep 1:1 aspect ratio, use side panels
 game_area = (32, 0, 192, 192)  # Center 192×192 square
@@ -50,6 +56,7 @@ right_panel = (224, 0, 32, 192)
 ```
 
 #### Full Width (Scrollers)
+
 ```python
 # Use full width, natural height
 game_area = (0, 0, 256, 192)
@@ -57,17 +64,18 @@ game_area = (0, 0, 256, 192)
 
 ## Sprite Size Guidelines
 
-| Type | 128×128 | 256×192 | Use Case |
-|------|---------|---------|----------|
-| Tiny | 4×4 | 6×6 | Dots, bullets |
-| Small | 6×6 | 10×10 | Characters, enemies |
-| Medium | 8×8 | 12×12 | Player sprites |
-| Large | 12×12 | 16×16 | Vehicles, items |
-| XLarge | 16×16 | 24×24 | Bosses, special |
+| Type   | 128×128 | 256×192 | Use Case            |
+| ------ | ------- | ------- | ------------------- |
+| Tiny   | 4×4     | 6×6     | Dots, bullets       |
+| Small  | 6×6     | 10×10   | Characters, enemies |
+| Medium | 8×8     | 12×12   | Player sprites      |
+| Large  | 12×12   | 16×16   | Vehicles, items     |
+| XLarge | 16×16   | 24×24   | Bosses, special     |
 
 ## Text Positioning
 
 ### Header Text
+
 ```python
 # Title at top
 OLD: matrix.text("Title", 2, 2, ...)
@@ -75,6 +83,7 @@ NEW: matrix.text("Title", 4, 4, ...)  # More padding
 ```
 
 ### Centered Text
+
 ```python
 # Use centered_text when available
 OLD: matrix.centered_text("Text", 64, ...)
@@ -82,6 +91,7 @@ NEW: matrix.centered_text("Text", 96, ...)
 ```
 
 ### HUD Elements
+
 ```python
 # Left-aligned score
 OLD: matrix.text("Score: 100", 2, 2, ...)
@@ -95,6 +105,7 @@ NEW: matrix.text("Hi: 500", 180, 4, ...)
 ## Grid-Based Games
 
 ### Snake
+
 ```python
 OLD_GRID = 4  # 4px per segment
 NEW_GRID = 6  # 6px per segment
@@ -104,6 +115,7 @@ NEW_CELLS = 42×32 (256/6 × 192/6)
 ```
 
 ### Tetris
+
 ```python
 OLD_BLOCK = 5  # 5px per block
 NEW_BLOCK = 8  # 8px per block
@@ -116,6 +128,7 @@ NEW_PLAYFIELD = 80×160
 ## Common Issues to Watch
 
 ### ❌ Hardcoded Dimensions
+
 ```python
 # BAD - Don't do this
 if x > 128: ...
@@ -124,6 +137,7 @@ for i in range(128): ...
 ```
 
 ### ✅ Responsive Code
+
 ```python
 # GOOD - Use matrix dimensions
 if x > matrix.width: ...
@@ -132,12 +146,14 @@ for i in range(matrix.width): ...
 ```
 
 ### ❌ Pixel-Perfect Assumptions
+
 ```python
 # BAD - Assumes exact positioning
 player_x = 64  # Center of 128
 ```
 
 ### ✅ Calculated Positions
+
 ```python
 # GOOD - Calculate from dimensions
 player_x = matrix.width // 2  # Always centered
@@ -161,6 +177,7 @@ When upgrading an app:
 ## Grep Search Commands
 
 Find hardcoded dimensions:
+
 ```bash
 # Find literal 128
 grep -n "128" examples/snake/main.py
@@ -217,6 +234,7 @@ NEW: matrix.rect(0, 0, 256, 12, ...)
 ## ZX Spectrum Color Palette
 
 Use these colors for authentic retro look:
+
 ```python
 BLACK = (0, 0, 0)
 BLUE = (0, 0, 215)
