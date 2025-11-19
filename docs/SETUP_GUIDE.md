@@ -38,6 +38,7 @@ python start.py --width 256 --height 192
 ```
 
 The system will automatically:
+
 - ✅ Detect pygame is available
 - ✅ Create a macOS window (instead of terminal display)
 - ✅ Capture keyboard input from the window (instead of terminal)
@@ -45,20 +46,22 @@ The system will automatically:
 ## Dependencies Explained
 
 ### Required (Always)
+
 - **Pillow** - For emoji rendering and icon support
 
 ### Optional (Enhances Development)
+
 - **pygame** - Enables macOS/Linux window display with keyboard input
   - Without it: Uses terminal display + terminal keyboard
   - With it: Nice resizable window + window keyboard capture
 
 ## Platform Support
 
-| Platform | Terminal Mode | Window Mode | Hardware Mode |
-|----------|---------------|-------------|---------------|
-| macOS | ✅ (no deps) | ✅ (+ pygame) | ❌ |
-| Linux | ✅ (no deps) | ✅ (+ pygame) | ✅ (Raspberry Pi) |
-| Windows | ✅ (no deps) | ⏳ TODO | ❌ |
+| Platform | Terminal Mode | Window Mode   | Hardware Mode     |
+| -------- | ------------- | ------------- | ----------------- |
+| macOS    | ✅ (no deps)  | ✅ (+ pygame) | ❌                |
+| Linux    | ✅ (no deps)  | ✅ (+ pygame) | ✅ (Raspberry Pi) |
+| Windows  | ✅ (no deps)  | ⏳ TODO       | ❌                |
 
 ## Troubleshooting
 
@@ -67,6 +70,7 @@ The system will automatically:
 This is normal! MatrixOS works without pygame using terminal mode.
 
 To enable window mode:
+
 ```bash
 pip install pygame
 ```
